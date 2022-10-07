@@ -174,11 +174,13 @@ uint32_t *str2sha256(const wchar_t *key) {
 }
 
 unsigned char *hash2str(const uint32_t *hash) {
+	if (hash == NULL) 
+		return NULL;
+
 	unsigned char *result = (unsigned char*)malloc(sizeof(unsigned char) * 65);
 	result[64] = '\0';
-	if (result == NULL) {
+	if (result == NULL)
 		return NULL;
-	}
 
 	for (int i = 0; i < 64; i++) 
 		result[i] = hex_sym[(hash[i/8] >> (7-i%8)*4) & 15];
