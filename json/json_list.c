@@ -441,93 +441,13 @@ static void printChar(value_t *content) {
 	printf("'%c'", *(char*)json_value(content));
 }
 
-/* int type */
-
-value_t *json_int(int value) {
-	value_t *new_int = (value_t*)malloc(sizeof(value_t));
-	if (new_int == NULL) 
-		return NULL;
-
-	new_int->type = INT;
-	new_int->value = malloc(sizeof(value));
-	if (new_int->value == NULL) {
-		free(new_int);
-		return NULL;
-	}
-	*(int*)(new_int->value) = value;
-	new_int->actions.print = &printInt;
-	new_int->actions.free = NULL;
-
-	return new_int;
-}
-
-/* unsigned int type */
-
-value_t *json_uint(unsigned int value) {
-	value_t *new_uint = (value_t*)malloc(sizeof(value_t));
-	if (new_uint == NULL) 
-		return NULL;
-
-	new_uint->type = INT;
-	new_uint->value = malloc(sizeof(value));
-	if (new_uint->value == NULL) {
-		free(new_uint);
-		return NULL;
-	}
-	*(unsigned int*)(new_uint->value) = value;
-	new_uint->actions.print = &printUint;
-	new_uint->actions.free = NULL;
-
-	return new_uint;
-}
-
-/* char type */
-
-value_t *json_char(char value) {
-	value_t *new_char = (value_t*)malloc(sizeof(value_t));
-	if (new_char == NULL) 
-		return NULL;
-
-	new_char->type = INT;
-	new_char->value = malloc(sizeof(value));
-	if (new_char->value == NULL) {
-		free(new_char);
-		return NULL;
-	}
-	*(char*)(new_char->value) = value;
-	new_char->actions.print = &printChar;
-	new_char->actions.free = NULL;
-
-	return new_char;
-}
-
 static void printNode(value_t *content);
-
-/* node (list in list) type */
-
-value_t *json_node() {
-	value_t *new_node = (value_t*)malloc(sizeof(value_t));
-	if (new_node == NULL)
-		return NULL;
-
-	new_node->type = NODE;
-	new_node->value = json_new();
-	if (new_node->value == NULL) {
-		free(new_node);
-		return NULL;
-	}
-
-	new_node->actions.print = &printNode;
-	new_node->actions.free = &json_free_list;
-
-	return new_node;
-}
 
 /* unknown type */
 
 value_t *json_unknown(void *value, void (*print)(value_t*), void (*free)(void*), wchar_t *(*convert)(value_t*)) {
 	value_t *new_unknown = (value_t*)malloc(sizeof(value_t));
-	if (new_unknown == NULL) 
+	if (new_unknown == NULL || value == NULL) 
 		return NULL;
 
 	new_unknown->type = UNKNOWN;
@@ -537,6 +457,65 @@ value_t *json_unknown(void *value, void (*print)(value_t*), void (*free)(void*),
 	new_unknown->actions.convert = convert;
 
 	return new_unknown;
+}
+
+/* int type */
+
+value_t *json_int(int value) {
+	int *new_int = (int*)malloc(sizeof(int));
+	if (new_int == NULL) 
+		return NULL;
+
+	*new_int = value;
+	value_t *item = json_unknown((void*)new_int, &printInt, NULL, NULL);
+	if (item == NULL)
+		return NULL;
+
+	item->type = INT;
+	return item;
+}
+
+/* unsigned int type */
+
+value_t *json_uint(unsigned int value) {
+	unsigned int *new_uint = (unsigned int*)malloc(sizeof(unsigned int));
+	if (new_uint == NULL) 
+		return NULL;
+
+	*new_uint = value;
+	value_t *item = json_unknown((void*)new_uint, &printUint, NULL, NULL);
+	if (item == NULL)
+		return NULL;
+
+	item->type = UINT;
+	return item;
+}
+
+/* char type */
+
+value_t *json_char(char value) {
+	char *new_char = (char*)malloc(sizeof(char));
+	if (new_char == NULL) 
+		return NULL;
+
+	*new_char = value;
+	value_t *item = json_unknown((void*)new_char, &printChar, NULL, NULL);
+	if (item == NULL)
+		return NULL;
+
+	item->type = CHAR;
+	return item;
+}
+
+/* node (list in list) type */
+
+value_t *json_node() {
+	value_t *item = json_unknown((void*)json_new(), &printNode, &json_free_list, NULL);
+	if (item == NULL)
+		return NULL;
+
+	item->type = NODE;
+	return item;
 }
 
 /* ----------------- */

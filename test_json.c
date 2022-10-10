@@ -3,11 +3,10 @@
 #include <locale.h>
 #include <stddef.h>
 
-#define JSON_CLASS
 #define JSON_NO_HASH
+#define JSON_CLASS
 
 #include "json/json_list.h"
-
 
 int main(int argc, char *argv[]) {
 	setlocale(LC_ALL, "ru_RU.UTF-8");
