@@ -38,7 +38,10 @@ static const uint32_t K[64] = {
 
 static char hex_sym[16] = "0123456789abcdef";
 
-uint32_t *str2sha256(const wchar_t *key) {
+hash_t *str2sha256(const wchar_t *key) {
+	if (key == NULL)
+		return NULL;
+
 	// create data pointer
 	uint32_t *data = NULL;
 
@@ -173,7 +176,7 @@ uint32_t *str2sha256(const wchar_t *key) {
 	return hash;
 }
 
-unsigned char *hash2str(const uint32_t *hash) {
+unsigned char *hash2str(const hash_t *hash) {
 	if (hash == NULL) 
 		return NULL;
 
@@ -188,13 +191,13 @@ unsigned char *hash2str(const uint32_t *hash) {
 	return result;
 }
 
-int cmphash(const uint32_t *hash1, const uint32_t *hash2) {
+int cmphash(const hash_t *hash1, const hash_t *hash2) {
 	for (uint8_t i = 0; i < 8; i++)
 		if (hash1[i] != hash2[i]) return 0;
 	return 1;
 }
 
-int print_hash(const uint32_t *hash) {
+int print_hash(const hash_t *hash) {
 	unsigned char *hash_str = hash2str(hash);
 	if (hash_str == NULL) 
 		return -1;

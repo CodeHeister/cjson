@@ -7,20 +7,22 @@
 extern "C" {
 #endif
 
-extern uint32_t *str2sha256(const wchar_t *key);
-extern unsigned char *hash2str(const uint32_t *hash);
-extern int cmphash(const uint32_t *hash1, const uint32_t *hash2);
-extern int print_hash(const uint32_t *hash);
+typedef uint32_t hash_t;
+
+extern hash_t *str2sha256(const wchar_t *key);
+extern unsigned char *hash2str(const hash_t *hash);
+extern int cmphash(const hash_t *hash1, const hash_t *hash2);
+extern int print_hash(const hash_t *hash);
 
 #ifdef SHA256_CLASS
 
 typedef struct SHA256 sha256_class;
 
 struct SHA256 {
-	uint32_t *(*getHash)(const wchar_t*);
-	unsigned char *(*toString)(const uint32_t*);
-	int (*compare)(const uint32_t*, const uint32_t*);
-	int (*print)(const uint32_t*);
+	hash_t *(*getHash)(const wchar_t*);
+	unsigned char *(*toString)(const hash_t*);
+	int (*compare)(const hash_t*, const hash_t*);
+	int (*print)(const hash_t*);
 };
 
 sha256_class SHA256 = { &str2sha256, &hash2str, &cpmhash, &print_hash };
