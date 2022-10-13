@@ -10,7 +10,7 @@ extern "C" {
 typedef uint32_t hash_t;
 
 extern hash_t *str2sha256(const wchar_t *key);
-extern unsigned char *hash2str(const hash_t *hash);
+extern wchar_t *hash2str(const hash_t *hash);
 extern int cmphash(const hash_t *hash1, const hash_t *hash2);
 extern int print_hash(const hash_t *hash);
 

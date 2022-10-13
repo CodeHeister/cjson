@@ -3,68 +3,36 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "json_list.h"
+#include "cjson.h"
 
 /* output configuraions */
 
 #define PRINT_GAP "\t"
 
-static uint8_t print_offset = 0;
+static uint8_t print_offset = 0; // offset counter for print function
 
-extern int use_hash;
+extern int use_hash; // key type flag
 
 /* content type for item */
 
 struct action_t {
-	void (*print)(value_t*);
-	void (*free)(void*);
-	wchar_t *(*convert)(value_t*);
+	void (*print)(value_t*, uint32_t flags);	// print function
+	void (*free)(void*);						// free function
+	wchar_t *(*convert)(value_t*);				// json2string function
 };
 
 struct value_t {
-	void *value;
-	data_type type;
-	action_t actions;
+	void *value;		// value storage
+	data_type type;		// abstract type storage
+	action_t actions;	// functions list
 };
 
 /* base item type */
 
 struct json_t {
-	json_key_t *key;
-	value_t *content;
-	json_t *next;
-};
-
-/* node in list translation */
-
-static json_t *node2list(json_t *node) {
-	if (node == NULL || json_get_type_of(node) != NODE)
-		return NULL;
-
-	return (json_t*)(node->content->value);
-}
-
-/* create new list */
-
-json_t *json_new() {
-	json_t *new_list = (json_t*)malloc(sizeof(json_t));
-	if (new_list == NULL)
-		return NULL;
-
-	new_list->content = (value_t*)malloc(sizeof(value_t));
-	if (new_list->content == NULL) {
-		free(new_list);
-		return NULL;
-	}
-
-	new_list->key = NULL;
-	new_list->content->type = LIST;
-	new_list->content->value = NULL;
-	new_list->content->actions.print = NULL;
-	new_list->content->actions.free = NULL;
-	new_list->content->actions.convert = NULL;
-	new_list->next = NULL;
-	return new_list;
+	json_key_t *key;	// json key
+	value_t *content;	// item content
+	json_t *next;		// next item pointer
 };
 
 /* get value from content */
@@ -110,6 +78,15 @@ void *json_get_value_of(json_t *item) {
 		return NULL;
 
 	return json_value(json_get_content_of(item));
+}
+
+/* node in list translation */
+
+static json_t *node2list(json_t *node) {
+	if (node == NULL || json_get_type_of(node) != NODE)
+		return NULL;
+
+	return (json_t*)(json_get_value_of(node));
 }
 
 /* check if list is valid (also node -> list) */
@@ -242,17 +219,18 @@ int json_free(json_t *item) {
 			free(value);
 		else
 			content->actions.free(value);
-
+		
 		free(item->content);
 	}
-	free(item);
 
+	free(item);
 	return 1;
 }
 
 /* free list item */
 
-static void json_free_list(void *value) {
+void json_free_list(void *value) {
+	value = json_check_list(value);
 	if (value == NULL)
 		return;
 
@@ -425,29 +403,95 @@ void *json_chain_value(wchar_t *keys, json_t *list) {
 
 /* print int */
 
-static void printInt(value_t *content) {
+static void printInt(value_t *content, uint32_t flags) {
 	printf("%d", *(int*)json_value(content));
 }
 
 /* print unsigned int */
 
-static void printUint(value_t *content) {
+static void printUint(value_t *content, uint32_t flags) {
 	printf("%u", *(unsigned int*)json_value(content));
 }
 
 /* print char */
 
-static void printChar(value_t *content) {
+static void printChar(value_t *content, uint32_t flags) {
 	printf("'%c'", *(char*)json_value(content));
 }
 
-static void printNode(value_t *content);
+static void printList(json_t *list, uint32_t flags) {
+	list = json_check_list(list);
+	if (list == NULL) return;
+
+	printf("{\n");
+	print_offset++;
+
+	json_t *item = list->next;
+	while (item != NULL) {
+		for (uint32_t i = 0; i < print_offset; i++) printf(PRINT_GAP);
+
+		if (use_hash)
+			print_hash((hash_t*)item->key);
+		else
+			print_str(item->key);
+
+		printf(" : ");
+		if (item->content->actions.print == NULL) 
+			printf("NO PRINT");
+		else
+			item->content->actions.print(item->content, flags);
+
+		if (item->next != NULL)
+			printf(",");
+
+		printf("\n");
+		item = item->next;
+	}
+
+	print_offset--;
+	for (uint32_t i = 0; i < print_offset; i++) printf(PRINT_GAP);
+	printf("}");
+}
+
+static void printNode(value_t *content, uint32_t flags) {
+	if (content == NULL || json_type(content) != NODE) return;
+
+	printList((json_t*)json_value(content), flags);
+
+	return;
+}
+
+void json_print(json_t *item, uint32_t flags) {
+	if (item == NULL) 
+		return;
+
+	int state = 0;
+	if (use_hash)
+		state = print_hash((hash_t*)item->key);
+	else
+		state = print_str(item->key);
+
+	if (state > 0) printf(" : ");
+
+	if (item->content->actions.print == NULL) {
+		printf("NO PRINT\n");
+	}
+	else {
+		if (json_get_type_of(item) == LIST)
+			item->content->actions.print(item, flags);
+		else
+			item->content->actions.print(item->content, flags);
+	}
+
+	printf("\n");
+	return;
+}
 
 /* unknown type */
 
-value_t *json_unknown(void *value, void (*print)(value_t*), void (*free)(void*), wchar_t *(*convert)(value_t*)) {
+value_t *json_unknown(void *value, void (*print)(value_t*, uint32_t), void (*free)(void*), wchar_t *(*convert)(value_t*)) {
 	value_t *new_unknown = (value_t*)malloc(sizeof(value_t));
-	if (new_unknown == NULL || value == NULL) 
+	if (new_unknown == NULL) 
 		return NULL;
 
 	new_unknown->type = UNKNOWN;
@@ -458,6 +502,32 @@ value_t *json_unknown(void *value, void (*print)(value_t*), void (*free)(void*),
 
 	return new_unknown;
 }
+
+/* create new list */
+
+json_t *json_new() {
+	json_t *new_list = (json_t*)malloc(sizeof(json_t));
+	value_t *list_content = json_unknown(NULL, &printList, NULL, NULL);
+	if (new_list == NULL || list_content == NULL) {
+		free(new_list);
+		free(list_content);
+		return NULL;
+	}
+
+	new_list->key = NULL;
+
+	new_list->content = (value_t*)malloc(sizeof(value_t));
+	if (new_list->content == NULL) {
+		free(list_content);
+		free(new_list);
+		return NULL;
+	}
+
+	new_list->content = list_content;
+	new_list->content->type = LIST;
+	new_list->next = NULL;
+	return new_list;
+};
 
 /* int type */
 
@@ -576,145 +646,30 @@ break_out:
 	return node;
 }
 
-
-static void printNode(value_t *content) {
-	if (content == NULL || content->value == NULL) return;
-
-	json_t *item = (json_t*)(content->value);
-	if (item->content->type != LIST) return;
-
-	item = item->next;
-	while (item != NULL) {
-		for (uint32_t i = 0; i < print_offset; i++)
-			printf(PRINT_GAP);
-
-		if (item->content->type == NODE) {
-			if (use_hash)
-				print_hash((hash_t*)item->key);
-			else
-				print_str(item->key);
-
-			printf(" : {\n");
-
-			print_offset++;
-			if (item->content->actions.print == NULL) 
-				printf("NO PRINT\n");
-			else
-				item->content->actions.print(item->content);
-			print_offset--;
-			for (uint32_t i = 0; i < print_offset; i++) printf(PRINT_GAP);
-			
-			printf("}\n");
-		}
-		else {
-			if (use_hash)
-				print_hash((hash_t*)item->key);
-			else
-				print_str(item->key);
-
-			printf(" : ");
-			if (item->content->actions.print == NULL) 
-				printf("NO PRINT");
-			else
-				item->content->actions.print(item->content);
-			if (item->next != NULL)
-				printf(",");
-			printf("\n");
-		}
-		item = item->next;
-	}
-
-	return;
-}
-
-void json_print(json_t *item) {
-	if (item == NULL) 
-		return;
-
-	printf("\n");
-	if (item->content->type == LIST) {
-		int is_null = use_hash ? print_hash((hash_t*)item->key) : print_str(item->key);
-
-		if (is_null < 0) {
-			printf("{\n");
-		}
-		else {
-			printf(" : {\n");
-		}
-		print_offset++;
-		item = item->next;
-		while (item != NULL) {
-			for (uint32_t i = 0; i < print_offset; i++)
-				printf(PRINT_GAP);
-
-			if (item->content->type == NODE) {
-				if (use_hash)
-					print_hash((hash_t*)item->key);
-				else
-					print_str(item->key);
-
-				printf(" : {\n");
-
-				print_offset++;
-				if (item->content->actions.print == NULL) 
-					printf("NO PRINT\n");
-				else
-					item->content->actions.print(item->content);
-				print_offset--;
-				for (uint32_t i = 0; i < print_offset; i++) printf(PRINT_GAP);
-				
-				printf("}\n");
-			}
-			else {
-				print_hash((hash_t*)item->key);
-				printf(" : ");
-				if (item->content->actions.print == NULL) 
-					printf("NO PRINT");
-				else
-					item->content->actions.print(item->content);
-				if (item->next != NULL)
-					printf(",");
-				printf("\n");
-			}
-			item = item->next;
-		}
-		print_offset--;
-		printf("}\n");
-	}
-	else {
-		if (item->content->actions.print == NULL) 
-			printf("NO PRINT\n");
-		else
-			item->content->actions.print(item->content);
-		printf("\n");
-	}
-
-	return;
-}
-
-/*
-int json_for_each(void (*iter)(char*, value_t*), json_t *list) {
-    if (list == NULL  iter == NULL  (json_get_type_of(list) != LIST && (json_get_type_of(list) != NODE))
-        return -1;
-    
-    if (json_get_type_of(list) == NODE)
-        list = node2list(list);
+int json_for_each(void (*iter)(json_t*, wchar_t*, value_t*), json_t *list) {
+	list = json_check_list(list);
+	if (list == NULL || iter == NULL)
+		return -1;
     
     json_t *item = list->next;
     while (item != NULL) {
-        uint32_t *key = hash2str(item->key);
-        if (key == NULL) {
-            printf("JSON.forEach: couldn't extract key");
-            item = item->next;
-            continue;
-        }
-        iter(key, json_get_value_of(item));
-        free(key);
+
+		if (use_hash) {
+			wchar_t *key = (wchar_t*)hash2str(item->key);
+			iter(item, key, json_get_content_of(item));
+			free(key);
+		}
+		else {
+			iter(item, (wchar_t*)item->key, json_get_content_of(item));
+		}
+
         item = item->next;
     }
     
     return 1;
 }
+
+/*
 
 int json_modify(wchar_t *new_key, value_t *new_value, wchar_t *key, json_t *list) {
 	list = json_check_list(list);
@@ -766,5 +721,7 @@ int json_modify(wchar_t *new_key, value_t *new_value, wchar_t *key, json_t *list
     return 1;
 }
 
-void json_info(json_t *
+void json_info(json_t *item) {
+	return;
+}
 */

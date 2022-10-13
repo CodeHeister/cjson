@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "hash/sha256.h"
+#include "../hash/sha256.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,6 +36,10 @@ enum info_flags {
 	SHOW_VALUE = 0x2
 };
 
+enum print_flags {
+	PRINT_PLAIN = 0x1
+};
+
 typedef struct json_t json_t;
 typedef enum data_type data_type;
 typedef enum info_flags info_flags;
@@ -56,13 +60,15 @@ extern value_t *json_chain_content(wchar_t*, json_t*);
 extern int json_add(wchar_t*, value_t*, json_t*);
 extern void *json_value(value_t*);
 extern data_type json_type(value_t*);
-extern void json_print(json_t*);
+extern void json_print(json_t*, uint32_t);
 extern value_t *json_int(int);
 extern value_t *json_uint(unsigned int);
 extern value_t *json_char(char);
 extern value_t *json_node();
-extern value_t *json_unknown(void*, void (*print)(value_t*), void (*free)(void*), wchar_t *(*convert)(value_t*));
+extern value_t *json_unknown(void*, void (*print)(value_t*, uint32_t flags), void (*free)(void*), wchar_t *(*convert)(value_t*));
 extern int json_remove(wchar_t*, json_t*);
+extern void json_free_list(void*);
+extern int json_for_each(void (*iter)(json_t*, wchar_t*, value_t*), json_t*);
 
 #ifdef JSON_CLASS
 
@@ -82,18 +88,20 @@ struct JSON {
 	value_t *(*chainContent)(wchar_t*, json_t*);
 	int (*add)(wchar_t*, value_t*, json_t*);
 	int (*remove)(wchar_t*, json_t*);
+	void (*freeList)(void*);
 	void *(*value)(value_t*);
 	data_type (*type)(value_t*);
-	void (*print)(json_t*);
+	void (*print)(json_t*, uint32_t);
+	int (*forEach)(void (*iter)(json_t*, wchar_t*, value_t*), json_t*);
 	value_t *(*_int_)(int);
 	value_t *(*_uint_)(unsigned int);
 	value_t *(*_char_)(char);
 	value_t *(*_node_)();
-	value_t *(*_unknown_)(void*, void (*print)(value_t*), void (*free)(void*), wchar_t *(*convert)(value_t*));
+	value_t *(*_unknown_)(void*, void (*print)(value_t*, uint32_t flags), void (*free)(void*), wchar_t *(*convert)(value_t*));
 };
 
 json_class JSON = { &json_new, &json_create, &json_get, &json_append, &json_get_content_of, &json_get_content, &json_get_type_of, &json_get_type, &json_length, &json_chain, &json_chain_content,
-	&json_add, &json_remove, &json_value, &json_type, &json_print, &json_int, &json_uint, &json_char, &json_node, &json_unknown };
+	&json_add, &json_remove, &json_free_list, &json_value, &json_type, &json_print, &json_for_each, &json_int, &json_uint, &json_char, &json_node, &json_unknown };
 
 #endif
 
@@ -134,7 +142,7 @@ int print_str(const json_key_t *key) {
 		return -1;
 
 	printf("%ls", key);
-	return 0;
+	return 1;
 }
 
 #else

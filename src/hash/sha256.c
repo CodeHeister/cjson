@@ -68,7 +68,7 @@ hash_t *str2sha256(const wchar_t *key) {
 		while (key[i] != '\0') {
 			
 			// size calculations excluding zero bytes
-			size += (uint32_t)ceil(ceil(log((double)key[i])/log(2))/8);
+			size += (uint32_t)ceil(log((double)key[i]) / log(256));
 			i++;
 		}
 		
@@ -80,6 +80,7 @@ hash_t *str2sha256(const wchar_t *key) {
 
 		// check if memory was allocated
 		if (tmp_data == NULL) {
+			free(hash);
 			return NULL;
 		}
 
@@ -94,7 +95,7 @@ hash_t *str2sha256(const wchar_t *key) {
 		// fill 8 bit array
 		while (key[i] != '\0') {
 			// get current char size excluding zero bytes
-			uint32_t tmp_char_size = (int)ceil(ceil(log((double)key[i])/log(2))/8);
+			uint32_t tmp_char_size = (int)ceil(log((double)key[i]) / log(256));
 
 			// iterate through char as 8 bit blocks
 			for (int g = tmp_char_size; g > 0; g--) {
@@ -109,7 +110,7 @@ hash_t *str2sha256(const wchar_t *key) {
 
 		{
 			// get size from byte size
-			uint32_t tmp_limit = (int)ceil(ceil(log((double)(size-9) * 8)/log(2)) / 8);
+			uint32_t tmp_limit = (int)ceil(log((double)(size-9) * 8) / log(256));
 
 			// get last index
 			int tmp_size = len_blk*64-1;
@@ -128,6 +129,8 @@ hash_t *str2sha256(const wchar_t *key) {
 
 	uint32_t *tmp_data = (uint32_t*)malloc(sizeof(uint32_t) * 64);
 	if (tmp_data == NULL) {
+		free(hash);
+		free(data);
 		return NULL;
 	}
 
@@ -176,11 +179,11 @@ hash_t *str2sha256(const wchar_t *key) {
 	return hash;
 }
 
-unsigned char *hash2str(const hash_t *hash) {
+wchar_t *hash2str(const hash_t *hash) {
 	if (hash == NULL) 
 		return NULL;
 
-	unsigned char *result = (unsigned char*)malloc(sizeof(unsigned char) * 65);
+	wchar_t *result = (wchar_t*)malloc(sizeof(wchar_t) * 65);
 	result[64] = '\0';
 	if (result == NULL)
 		return NULL;
@@ -198,10 +201,14 @@ int cmphash(const hash_t *hash1, const hash_t *hash2) {
 }
 
 int print_hash(const hash_t *hash) {
-	unsigned char *hash_str = hash2str(hash);
+	wchar_t *hash_str = hash2str(hash);
 	if (hash_str == NULL) 
 		return -1;
-	printf("sha256:%s", hash_str);
+	printf("sha256:%ls", hash_str);
 	free(hash_str);
-	return 0;
+	return 1;
+}
+
+uint32_t digits(uint32_t result_ns, uint32_t request_ns, uint32_t k) {
+	return ceil(k*log(request_ns)/log(result_ns));
 }
