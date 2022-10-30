@@ -2,25 +2,24 @@
 #include <stdlib.h>
 #include <locale.h>
 #include <stddef.h>
-
-#define JSON_CLASS
+#include <time.h>
+#include <limits.h>
+#include <math.h>
 
 #include "../src/cjson/cjson.h"
-
-void printKey(json_t *item, wchar_t *key, value_t *content) {
-	printf("%ls\n", key);
-}
+#include "../src/hash/sha256.h"
 
 int main(int argc, char *argv[]) {
 	setlocale(LC_ALL, "ru_RU.UTF-8");
-	json_t *list = JSON.new();
+	json_t *list = JSON_new();
 
-	JSON.add(L"test", JSON._node_(), list);
-	JSON.add(L"test2", JSON._int_(2), JSON.get(L"test", list));
-	JSON.add(L"test3", JSON._int_(2), list);
-	JSON.add(L"test3", JSON._int_(2), list);
+	JSON_add(L"test", JSON_node(), list);
+	JSON_add(L"test", JSON_int(2), JSON_get(L"test", list));
 
-	JSON.print(JSON.get(L"test3", list), 0);
-	JSON.forEach(&printKey, list);
+	JSON_info(list, SHOW_LENGTH | SHOW_VALUE | SHOW_TREE | SHOW_HASH | SHOW_KEY);
+
+	hash_t *hash = str2sha256(L"hover");
+	print_hash(hash);
+	printf("\n%u", hash_rest(hash, UINT_MAX));
 	return 0;
 }

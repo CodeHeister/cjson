@@ -1,10 +1,10 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <math.h>
-
+#include <errno.h>
 #include <inttypes.h>
-#include <stdio.h>
 
 #include "sha256.h"
 
@@ -180,12 +180,12 @@ hash_t *str2sha256(const wchar_t *key) {
 }
 
 wchar_t *hash2str(const hash_t *hash) {
-	if (hash == NULL) 
+	if (!hash) 
 		return NULL;
 
 	wchar_t *result = (wchar_t*)malloc(sizeof(wchar_t) * 65);
 	result[64] = '\0';
-	if (result == NULL)
+	if (!result)
 		return NULL;
 
 	for (int i = 0; i < 64; i++) 
@@ -195,6 +195,11 @@ wchar_t *hash2str(const hash_t *hash) {
 }
 
 int cmphash(const hash_t *hash1, const hash_t *hash2) {
+	if (!hash1 || !hash2) {
+		errno = EINVAL;
+		return -1;
+	}
+
 	for (uint8_t i = 0; i < 8; i++)
 		if (hash1[i] != hash2[i]) return 0;
 	return 1;
@@ -202,13 +207,34 @@ int cmphash(const hash_t *hash1, const hash_t *hash2) {
 
 int print_hash(const hash_t *hash) {
 	wchar_t *hash_str = hash2str(hash);
-	if (hash_str == NULL) 
+	if (!hash_str)  {
+		printf("\033[36mSHA256\033[39m : \033[31mno hash\033[39m");
 		return -1;
-	printf("sha256:%ls", hash_str);
+	}
+
+	printf("\033[36mSHA256\033[39m : %ls", hash_str);
 	free(hash_str);
 	return 1;
 }
 
-uint32_t digits(uint32_t result_ns, uint32_t request_ns, uint32_t k) {
-	return ceil(k*log(request_ns)/log(result_ns));
+uint32_t digits(uint32_t num_space, uint32_t n) {
+	return ceil(log(n)/log(num_space));
 }
+
+uint32_t first(uint32_t n, size_t offset) {
+	return n/pow(10, floor(log10(n))-offset);
+}
+
+uint32_t hash_rest(const hash_t *hash, uint32_t k) {
+	size_t length = 8;
+	size_t k_size = floor(log2(k) + 1);
+	size_t hash_size = sizeof(*hash) * length * 8;
+	
+	uint32_t rest = hash[0] >> (hash_size - k_size);
+	for (size_t i = hash_size - k_size; i--> 0;) {
+		uint32_t num = (rest << 1) | (hash[(hash_size-i-1) / (sizeof(*hash) * 8)] >> i & 1);
+		rest = (num >= k) ? num - k : num;
+	}
+	return rest;
+}
+
