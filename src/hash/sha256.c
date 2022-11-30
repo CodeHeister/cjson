@@ -39,17 +39,17 @@ static const uint32_t K[64] = {
 static char hex_sym[16] = "0123456789abcdef";
 
 hash_t *str2sha256(const wchar_t *key) {
-	if (key == NULL)
+	if (!key)
 		return NULL;
 
 	// create data pointer
 	uint32_t *data = NULL;
 
 	// create var for 512 bit block amount
-	uint32_t len_blk = 0;
+	size_t len_blk = 0;
 
 	// create byte size var (including extra byte and size bytes) 
-	uint32_t size = 9;
+	size_t size = 9;
 	
 	// hash storage for calculations
 	uint32_t *hash = (uint32_t*)malloc(sizeof(uint32_t) * 8);
@@ -62,79 +62,76 @@ hash_t *str2sha256(const wchar_t *key) {
     hash[6] = 0x1F83D9AB;
     hash[7] = 0x5BE0CD19;
 
-	{	
-		// iterator
-		uint32_t i = 0;
-		while (key[i] != '\0') {
-			
-			// size calculations excluding zero bytes
-			size += (uint32_t)ceil(log((double)key[i]) / log(256));
-			i++;
-		}
+	// iterator
+	size_t i = 0;
+	size_t j;
+	while (key[i] != '\0') {
 		
-		// 512 bit blocks amount
-		len_blk += (int)ceil(size*8/512.0);
+		// size calculations excluding zero bytes
+		size += (size_t)ceil(log(key[i]) / log(256));
+		i++;
+	}
+	
+	// 512 bit blocks amount
+	len_blk += (size_t)ceil(size*8/512.0);
 
-		// 8 bit data array
-		uint8_t *tmp_data = (uint8_t*)malloc(len_blk * 512);
+	// 8 bit data array
+	uint8_t *tmp_data = (uint8_t*)malloc(len_blk * 512);
 
-		// check if memory was allocated
-		if (tmp_data == NULL) {
-			free(hash);
-			return NULL;
-		}
-
-		// wipe garbage
-		for (int j = 0; j < len_blk * 64; j++)
-			tmp_data[j] = 0;
-
-		// drop iterators
-		i = 0;
-		uint32_t j = 0;
-
-		// fill 8 bit array
-		while (key[i] != '\0') {
-			// get current char size excluding zero bytes
-			uint32_t tmp_char_size = (int)ceil(log((double)key[i]) / log(256));
-
-			// iterate through char as 8 bit blocks
-			for (int g = tmp_char_size; g > 0; g--) {
-				// add 8 bit data in backward direction to 32 bit 
-				tmp_data[j/4*4+3-j%4] = (uint8_t)(key[i] >> (g-1) * 8);
-				j++;
-			}
-			i++;
-		}
-		// add extra byte
-		tmp_data[j/4*4+3-j%4] = 0b10000000;
-
-		{
-			// get size from byte size
-			uint32_t tmp_limit = (int)ceil(log((double)(size-9) * 8) / log(256));
-
-			// get last index
-			int tmp_size = len_blk*64-1;
-
-			// get byte size for byte size
-			uint32_t tmp_bit_size = (size-9) * 8;
-
-			for (int g = 0; g < tmp_limit; g++)
-				// iterate to add byte size to the end of data in backward direction to 32 bit
-				tmp_data[tmp_size-(3-g%4)] = (uint8_t)(tmp_bit_size >> g * 8);
-		}
-
-		// move 8 bit data to 32 bit
-		data = (uint32_t*)tmp_data;
+	// check if memory was allocated
+	if (!tmp_data) {
+		free(hash);
+		return NULL;
 	}
 
-	uint32_t *tmp_data = (uint32_t*)malloc(sizeof(uint32_t) * 64);
-	if (tmp_data == NULL) {
+	// wipe garbage
+	for (j = 0; j < len_blk * 64; j++)
+		tmp_data[j] = 0;
+
+	// drop iterators
+	i = 0;
+	j = 0;
+
+	// fill 8 bit array
+	while (key[i] != '\0') {
+		// get current char size excluding zero bytes
+		size_t tmp_char_size = (size_t)ceil(log(key[i]) / log(256));
+
+		// iterate through char as 8 bit blocks
+		for (size_t g = tmp_char_size; g > 0; g--) {
+			// add 8 bit data in backward direction to 32 bit 
+			tmp_data[j/4*4+3-j%4] = (uint8_t)(key[i] >> (g-1) * 8);
+			j++;
+		}
+		i++;
+	}
+	// add extra byte
+	tmp_data[j/4*4+3-j%4] = 0b10000000;
+
+	// get size from byte size
+	uint32_t tmp_limit = (size_t)ceil(log((size-9) * 8) / log(256));
+
+	// get last index
+	size_t tmp_size = len_blk*64-1;
+
+	// get byte size for byte size
+	size_t tmp_bit_size = (size-9) * 8;
+
+	for (j = 0; j < tmp_limit; j++)
+		// iterate to add byte size to the end of data in backward direction to 32 bit
+		tmp_data[tmp_size-(3-j%4)] = (uint8_t)(tmp_bit_size >> j * 8);
+
+	// move 8 bit data to 32 bit
+	data = (uint32_t*)tmp_data;
+
+	uint32_t *tmp_storage = (uint32_t*)malloc(sizeof(uint32_t) * 64);
+	if (!tmp_storage) {
 		free(hash);
 		free(data);
 		return NULL;
 	}
 
-	for (uint32_t i = 0; i < len_blk; i++) {
+	for (i = 0; i < len_blk; i++) {
 
 		uint32_t a = hash[0];
 		uint32_t b = hash[1];
@@ -145,14 +142,14 @@ hash_t *str2sha256(const wchar_t *key) {
 		uint32_t g = hash[6];
 		uint32_t h = hash[7];
 
-		for (uint8_t j = 0; j < 16; j++) 
-			tmp_data[j] = data[i*16+j];
+		for (j = 0; j < 16; j++) 
+			tmp_storage[j] = data[i*16+j];
 		
-		for (uint8_t j = 0; j < 48; j++)
-			tmp_data[j+16] = tmp_data[j] + s0(tmp_data[j+1]) + tmp_data[j+9] + s1(tmp_data[j+14]);
+		for (j = 0; j < 48; j++)
+			tmp_storage[j+16] = tmp_storage[j] + s0(tmp_storage[j+1]) + tmp_storage[j+9] + s1(tmp_storage[j+14]);
 
-		for (uint8_t j = 0; j < 64; j++) {
-			uint32_t tmp1 = h + S1(e) +	Ch(e, f, g) + tmp_data[j] + K[j];
+		for (j = 0; j < 64; j++) {
+			uint32_t tmp1 = h + S1(e) +	Ch(e, f, g) + tmp_storage[j] + K[j];
 			uint32_t tmp2 = Maj(a, b, c) + S0(a);
 			h = g;
 			g = f;
@@ -173,7 +170,7 @@ hash_t *str2sha256(const wchar_t *key) {
 		hash[6] = hash[6] + g;
 		hash[7] = hash[7] + h;
 	}
-	free(tmp_data);
+	free(tmp_storage);
 	free(data);
 
 	return hash;
@@ -221,11 +218,7 @@ uint32_t digits(uint32_t num_space, uint32_t n) {
 	return ceil(log(n)/log(num_space));
 }
 
-uint32_t first(uint32_t n, size_t offset) {
-	return n/pow(10, floor(log10(n))-offset);
-}
-
-uint32_t hash_rest(const hash_t *hash, uint32_t k) {
+uint32_t hash_mod(const hash_t *hash, uint32_t k) {
 	size_t length = 8;
 	size_t k_size = floor(log2(k) + 1);
 	size_t hash_size = sizeof(*hash) * length * 8;
