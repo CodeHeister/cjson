@@ -15,11 +15,17 @@ DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 _OBJ=base.o sha256.o types.o test.o config.o extra.o list.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-$(ODIR)/%.o: $(SDIR)/%.c $(DEPS) 
+$(ODIR)/%.o: $(SDIR)/%.c $(DEPS) | $(ODIR)
 	$(CC) -c -o $@ $< $(CFLAGS)
+
 
 test: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+$(OBJ): | $(ODIR)
+
+$(ODIR):
+	mkdir -p $@
 
 run: test
 	# export LD_LIBRARY_PATH=$(LDIR):$(LD_LIBRARY_PATH)
