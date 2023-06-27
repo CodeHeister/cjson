@@ -160,52 +160,99 @@ void jsonPrint(json_t *item, PrintFlags flags) {
 }
 
 void freeList(json_t *list) {
+
 	list = jsonCheckJsonList(list);
+	
 	if (!list)
 		return;
 
-	json_t *item = list->next;
-	while (item != NULL) {
-		jsonFree(item);
+	json_t *iter = list->next;
+	while (iter != NULL) {
+		jsonFree(iter);
 
-		item = item->next;
+		json_t *tmp = iter->next;
+		iter->next = NULL;
 
-		free(item);
-		item = NULL;
+		free(iter);
+		iter = NULL;
+
+		iter = tmp;
 	}
 
 	free(list->value);
+
 	list->value = NULL;
+	list->vtable = NULL;
+	list->next = NULL;
 
 	return;
 }
 
-void freeHashNode(json_t *item) {
-	if (!item || jsonGetType(item) != HASH_NODE)
+void freeNode(json_t *node) {
+	if (!node || jsonGetType(node) != NODE)
 		return;
 
-	json_t *iter = item->value;
+
+}
+
+void freeHashNode(json_t *hash_node) {
+	if (!hash_node || jsonGetType(hash_node) != HASH_NODE)
+		return;
+
+	json_t *iter = hash_node->value;
 	while (iter != NULL) {
 		jsonFree(iter);
 
-		iter = iter->next;
-		
+		json_t *tmp = iter->next;
+		iter->next = NULL;
+
 		free(iter);
 		iter = NULL;
+
+		iter = tmp;
 	}
 
-	free(item->value);
-	item->value = NULL;
+	hash_node->vtable = NULL;
 
+	return;
+}
+
+void freeInt(json_t *item) {
+	if (!item || jsonGetType(item) != ITEM)
+		return;
+
+	item->i64 = 0;
+	item->vtable = NULL;
+	
+	return;
+}
+
+void freeUint(json_t *item) {
+	if (!item || jsonGetType(item) != ITEM)
+		return;
+
+	item->u64 = 0;
+	item->vtable = NULL;
+	
+	return;
+}
+
+void freeChar(json_t *item) {
+	if (!item || jsonGetType(item) != ITEM)
+		return;
+
+	item->c = 0;
+	item->vtable = NULL;
+	
 	return;
 }
 
 json_ftable_t json_list_vtable = { &printList, &freeList, NULL };
 json_ftable_t json_node_vtable = { &printNode, NULL, NULL };
 json_ftable_t json_hash_node_vtable = { &printHashNode, &freeHashNode, NULL };
-json_ftable_t json_int_vtable = { &printInt, NULL, NULL };
-json_ftable_t json_uint_vtable = { &printUint, NULL, NULL };
-json_ftable_t json_char_vtable = { &printChar, NULL, NULL };
+json_ftable_t json_int_vtable = { &printInt, &freeInt, NULL };
+json_ftable_t json_uint_vtable = { &printUint, &freeUint, NULL };
+json_ftable_t json_char_vtable = { &printChar, &freeChar, NULL };
 
 json_t *jsonUnknown(void *value, json_ftable_t *vtable) {
 	json_t *item = (json_t*)malloc(sizeof(json_t));
@@ -293,7 +340,7 @@ json_t *jsonNew(json_t *dest) {
 
 /* int type */
 
-json_t *jsonInt(wchar_t *key, int64_t value) {
+json_t *jsonInt(const wchar_t *key, int64_t value) {
 	
 	json_t *item = jsonUnknown(NULL, &json_int_vtable);
 	hash_t *hash = wstr2sha256(key);
@@ -312,15 +359,10 @@ json_t *jsonInt(wchar_t *key, int64_t value) {
 
 	item->i64 = value;
 	
-	size_t count;
-	for (count = 0; key[count] != L'\0'; count++);
+	wchar_t *tmp_key = cloneWstr(key);
 
-	wchar_t *tmp_key = (wchar_t*)malloc(sizeof(wchar_t) * (count+1));
-	for (count = 0; key[count] != L'\0'; count++)
-		tmp_key[count] = key[count];
-	tmp_key[count] = L'\0';
-
-	infoAdd(L"key", WSTRING, tmp_key, info);
+	if (tmp_key != NULL)
+		infoAdd(L"key", WSTRING, tmp_key, info);
 
 	info_type_t type = INT;
 	infoAdd(L"type", UINT, &type, info);
@@ -354,17 +396,10 @@ json_t *jsonUint(const wchar_t *key, uint64_t value) {
 
 	item->u64 = value;
 
-	size_t count;
-	for (count = 0; key[count] != L'\0'; count++);
+	wchar_t *tmp_key = cloneWstr(key);
 
-	wchar_t *tmp_key = (wchar_t*)malloc(sizeof(wchar_t) * (count+1));
-	
-	for (count = 0; key[count] != L'\0'; count++)
-		tmp_key[count] = key[count];
-	
-	tmp_key[count] = L'\0';
-
-	infoAdd(L"key", WSTRING, tmp_key, info);
+	if (tmp_key != NULL)
+		infoAdd(L"key", WSTRING, tmp_key, info);
 
 	info_type_t type = UINT;
 	infoAdd(L"type", UINT, &type, info);
@@ -378,7 +413,7 @@ json_t *jsonUint(const wchar_t *key, uint64_t value) {
 
 /* char type */
 
-json_t *jsonChar(wchar_t *key, char value) {
+json_t *jsonChar(const wchar_t *key, char value) {
 
 	json_t *item = jsonUnknown(NULL, &json_char_vtable);
 	hash_t *hash = wstr2sha256(key);
@@ -397,17 +432,10 @@ json_t *jsonChar(wchar_t *key, char value) {
 	
 	item->c = value;
 
-	size_t count;
-	for (count = 0; key[count] != L'\0'; count++);
+	wchar_t *tmp_key = cloneWstr(key);
 
-	wchar_t *tmp_key = (wchar_t*)malloc(sizeof(wchar_t) * (count+1));
-	
-	for (count = 0; key[count] != L'\0'; count++)
-		tmp_key[count] = key[count];
-	
-	tmp_key[count] = L'\0';
-
-	infoAdd(L"key", WSTRING, tmp_key, info);
+	if (tmp_key != NULL)
+		infoAdd(L"key", WSTRING, tmp_key, info);
 
 	info_type_t type = CHAR;
 	infoAdd(L"type", UINT, &type, info);

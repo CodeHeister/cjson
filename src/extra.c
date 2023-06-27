@@ -18,13 +18,12 @@ size_t rand_pos() {
 	return (rand()*HASH_LIMIT)/RAND_MAX;
 }
 
-wchar_t *clone_wstr(const wchar_t *key) {
+wchar_t *cloneWstr(const wchar_t *key) {
 	if (!key)
 		return NULL;
 
-	size_t i = 0;
-	while (key[i] != '\0')
-		i++;
+	size_t i;
+	for (i = 0; key[i] != '\0'; i++);
 
 	wchar_t *clone = (wchar_t*)malloc(sizeof(wchar_t) * (i+1));
 

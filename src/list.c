@@ -18,19 +18,14 @@ void jsonFree(json_t *item) {
 	if (!item)
 		return;
 
-	info_type_t *type =  (info_type_t*)infoGetValue(infoFind(L"type", jsonGetInfo(item)));
-	
-	if (jsonGetType(item) == ITEM && type != NULL && *type >= STRING) {
-		
-		if (!item->vtable || !item->vtable->free) {
+	if (!item->vtable || !item->vtable->free) {
 
-			free(item->value);
-			item->value = NULL;
-		}
-		else {
-			
-			item->vtable->free(item);
-		}
+		free(item->value);
+		item->value = NULL;
+	}
+	else {
+		
+		item->vtable->free(item);
 	}
 
 	infoFree(jsonGetInfo(item));

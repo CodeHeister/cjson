@@ -135,13 +135,13 @@ hash_t *_wstr2sha256(const wchar_t *key) {
 	// hash storage for calculations
 	hash_t *hash = (hash_t*)malloc(sizeof(uint32_t) * HASH_LENGTH);
 	hash[0] = 0x6A09E667;
-    hash[1] = 0xBB67AE85;
-    hash[2] = 0x3C6EF372;
-    hash[3] = 0xA54FF53A;
-    hash[4] = 0x510E527F;
-    hash[5] = 0x9B05688C;
-    hash[6] = 0x1F83D9AB;
-    hash[7] = 0x5BE0CD19;
+	hash[1] = 0xBB67AE85;
+	hash[2] = 0x3C6EF372;
+	hash[3] = 0xA54FF53A;
+	hash[4] = 0x510E527F;
+	hash[5] = 0x9B05688C;
+	hash[6] = 0x1F83D9AB;
+	hash[7] = 0x5BE0CD19;
 
 	for (i = 0; i < len_blk; i++) {
 

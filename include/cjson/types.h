@@ -97,9 +97,9 @@ extern void jsonPrint(json_t*, PrintFlags);
 extern json_t *jsonNew(json_t*);
 extern json_t *jsonHashNode();
 extern json_t *jsonUnknown(void*, json_ftable_t*);
-extern json_t *jsonInt(wchar_t*, int64_t);
+extern json_t *jsonInt(const wchar_t*, int64_t);
 extern json_t *jsonUint(const wchar_t*, uint64_t);
-extern json_t *jsonChar(wchar_t*, char);
+extern json_t *jsonChar(const wchar_t*, char);
 
 #ifdef __cplusplus
 }
