@@ -10,14 +10,11 @@ json_t *getLast(json_t *list) {
 		return NULL;
 
 	json_t *item = list;
-	json_t *last_item = NULL;
 
-	while (item != NULL) {
-		last_item = item;
+	while (item->next != NULL)
 		item = item->next;
-	}
 
-	return (item != NULL && !last_item) ? item : last_item;
+	return item;
 }
 
 bool append(json_t *item, json_t *list) {
@@ -40,7 +37,7 @@ bool unshift(json_t *item, json_t *list) {
 	json_t *next_item = list->next;
 	list->next = item;
 
-	json_t *last = (!item->next) ? item : getLast(item);
+	json_t *last = getLast(item);
 	last->next = next_item;
 
 	return 1;
@@ -190,7 +187,7 @@ bool infoFreeItem(size_t index, info_t *info) {
 	if (!info || index >= info->length)
 		return 0;
 	
-	free(info->array[index].hash);
+	freeHash(info->array[index].hash);
 	if (info->array[index].type >= STRING)
 		free(info->array[index].value);
 
@@ -363,7 +360,7 @@ info_item_t *infoFind(wchar_t *key, info_t *info) {
 		}
 	}
 
-	free(hash);
+	freeHash(hash);
 	hash = NULL;
 
 	return item;
@@ -377,7 +374,7 @@ bool infoRemove(wchar_t *key, info_t *info) {
 	if (!item)
 		return 0;
 
-	free(item->hash);
+	freeHash(item->hash);
 	if (item->type >= STRING)
 		free(item->value);
 

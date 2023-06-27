@@ -93,10 +93,10 @@ typedef struct json_ftable {
 extern type_t jsonGetType(json_t*);
 extern info_t *jsonGetInfo(json_t*);
 extern void *jsonGetValue(json_t*);
-extern void jsonPrint(json_t*, PrintFlags);
 extern json_t *jsonNew(json_t*);
+extern json_t *jsonNode(const wchar_t*, json_t*);
 extern json_t *jsonHashNode();
-extern json_t *jsonUnknown(void*, json_ftable_t*);
+extern json_t *jsonUnknown(void*, json_ftable_t*, json_t*);
 extern json_t *jsonInt(const wchar_t*, int64_t);
 extern json_t *jsonUint(const wchar_t*, uint64_t);
 extern json_t *jsonChar(const wchar_t*, char);

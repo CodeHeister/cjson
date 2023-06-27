@@ -236,6 +236,15 @@ int compareHash(const hash_t *hash1, const hash_t *hash2) {
 	return 1;
 }
 
+void freeHash(hash_t *hash) {
+	if (!hash)
+		return;
+	
+	free(hash);
+
+	return;
+}
+
 int printHash(const hash_t *hash) {
 
 	wchar_t *hash_str = hash2str(hash);

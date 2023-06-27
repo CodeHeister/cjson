@@ -13,6 +13,7 @@ extern "C" {
 
 extern json_t *jsonCheckJsonList(json_t*);
 extern void jsonFree(json_t*);
+extern void jsonPrint(json_t*, PrintFlags);
 extern bool jsonAdd(json_t*, json_t*);
 extern json_t *jsonGet(wchar_t*, json_t*);
 extern json_t *jsonGetHashNodeByIndex(int, json_t*);

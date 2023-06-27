@@ -30,6 +30,19 @@ void jsonFree(json_t *item) {
 
 	infoFree(jsonGetInfo(item));
 
+	if (item->vtable != NULL)
+		item->vtable = NULL;
+
+	item->type = UNKNOWN;
+
+	return;
+}
+
+void jsonPrint(json_t *item, PrintFlags flags) {
+	if (item != NULL && item->vtable != NULL)
+		item->vtable->print(item, flags);
+	printf("\n");
+
 	return;
 }
 
@@ -148,107 +161,60 @@ json_t *jsonGet(wchar_t *key, json_t *list) {
 	uint32_t key_mod = sha256Mod(key_hash, HASH_LIMIT);
 	
 	while (hash_node != NULL) {
-		
-		if (key_mod < *(size_t*)infoGetValue(infoFind(L"pos", jsonGetInfo(hash_node)))) {
-			
-			json_t *tmp_item = (jsonGetType(hash_node) == HASH_NODE) ? (json_t*)jsonGetValue(hash_node) : NULL;
-			
-			while (tmp_item != NULL) {
-				
-				hash_t *tmp_hash = (hash_t*)infoGetValue(infoFind(L"hash", jsonGetInfo(tmp_item)));
-				wchar_t *tmp_key = NULL;
-				
-				if (!tmp_hash) {
-					
-					tmp_key = (wchar_t*)infoGetValue(infoFind(L"key", jsonGetInfo(tmp_item)));
 
-					if (!tmp_key) {
-
-						tmp_hash = NULL;
-					}
-					else {
-
-						tmp_hash = wstr2sha256(tmp_key);
-					}
-				}
-				
-				if (tmp_hash != NULL && compareHash(tmp_hash, key_hash)) {
-				
-					item = tmp_item;
-
-					if (tmp_key != NULL) {
-
-						free(tmp_hash);
-						tmp_hash = NULL;
-					}
-
-					break;
-				}
-				
-				if (tmp_key != NULL) {
-
-					free(tmp_hash);
-					tmp_hash = NULL;
-				}
-
-				tmp_item = tmp_item->next;
-			}
-
+		if (key_mod < *(size_t*)infoGetValue(infoFind(L"pos", jsonGetInfo(hash_node))))
 			break;
-		}
 
 		hash_node = hash_node->next;
 	}
 
-	if (!hash_node) {
+	if (!hash_node)
 		hash_node = list->next;
+
+	json_t *tmp_item = (jsonGetType(hash_node) == HASH_NODE) ? (json_t*)jsonGetValue(hash_node) : NULL;
+	
+	while (tmp_item != NULL) {
 		
-		json_t *tmp_item = (jsonGetType(hash_node) == HASH_NODE) ? (json_t*)jsonGetValue(hash_node) : NULL;
+		hash_t *tmp_hash = (hash_t*)infoGetValue(infoFind(L"hash", jsonGetInfo(tmp_item)));
+		wchar_t *tmp_key = NULL;
 		
-		while (tmp_item != NULL) {
+		if (!tmp_hash) {
 			
-			hash_t *tmp_hash = (hash_t*)infoGetValue(infoFind(L"hash", jsonGetInfo(tmp_item)));
-			wchar_t *tmp_key = NULL;
-			
-			if (!tmp_hash) {
-				
-				tmp_key = (wchar_t*)infoGetValue(infoFind(L"key", jsonGetInfo(tmp_item)));
+			tmp_key = (wchar_t*)infoGetValue(infoFind(L"key", jsonGetInfo(tmp_item)));
 
-				if (!tmp_key) {
+			if (!tmp_key) {
 
-					tmp_hash = NULL;
-				}
-				else {
-
-					tmp_hash = wstr2sha256(tmp_key);
-				}
+				tmp_hash = NULL;
 			}
-			
-			if (tmp_hash != NULL && compareHash(tmp_hash, key_hash)) {
-			
-				item = tmp_item;
+			else {
 
-				if (tmp_key != NULL) {
-
-					free(tmp_hash);
-					tmp_hash = NULL;
-				}
-
-				break;
+				tmp_hash = wstr2sha256(tmp_key);
 			}
-			
+		}
+		
+		if (tmp_hash != NULL && compareHash(tmp_hash, key_hash)) {
+		
+			item = tmp_item;
+
 			if (tmp_key != NULL) {
 
-				free(tmp_hash);
+				freeHash(tmp_hash);
 				tmp_hash = NULL;
 			}
 
-			tmp_item = tmp_item->next;
+			break;
+		}
+		
+		if (tmp_key != NULL) {
+
+			freeHash(tmp_hash);
+			tmp_hash = NULL;
 		}
 
+		tmp_item = tmp_item->next;
 	}
 
-	free(key_hash);
+	freeHash(key_hash);
 	key_hash = NULL;
 
 	return item;
@@ -398,7 +364,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 	if (tmp_key != NULL) {
 
 		tmp_hash = NULL;
-		free(tmp_hash);
+		freeHash(tmp_hash);
 	}
 
 	while (hash_node != NULL) {
@@ -460,7 +426,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 
 		if (tmp_key != NULL) {
 
-			free(key_hash);
+			freeHash(key_hash);
 			key_hash = NULL;
 		}
 	}
