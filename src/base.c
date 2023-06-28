@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <wchar.h>
 
 #include <cjson/types.h>
 #include <cjson/sha256.h>
@@ -111,7 +112,7 @@ bool infoSetItem(size_t i, hash_t *hash, info_type_t type, void *value, info_t *
 			break;
 
 		case WCHAR:
-			info->array[i].wc = *(wchar_t*)(value);
+			info->array[i].wc = *(char32_t*)(value);
 			break;
 
 		default:

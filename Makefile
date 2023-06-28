@@ -1,10 +1,12 @@
-IDIR=include
 CC=gcc
-CFLAGS=-I$(IDIR) -Wall -Wshadow -Wvla -Wimplicit-function-declaration -pedantic -lm -g3 #-Werror
+CFLAGS=-I$(IDIR) -Wall -Wshadow -Wvla -Wimplicit-function-declaration -pedantic -lm -g3 -Werror
 
+IDIR=include
 SDIR=src
-ODIR=$(SDIR)/obj
-LDIR =lib
+BDIR=build
+LDIR=lib
+ODIR=$(BDIR)/obj
+TDIR=$(SDIR)/tests
 
 #_LIBS=libcjson.so.1.0 libhash.so.1.0
 #LIBS=$(patsubst %,$(LDIR)/%,$(_DEPS))
@@ -12,28 +14,48 @@ LDIR =lib
 _DEPS=types.h sha256.h base.h list.h cjson.h config.h extra.h
 DEPS = $(patsubst %,$(IDIR)/cjson/%,$(_DEPS))
 
-_OBJ=base.o sha256.o types.o test.o config.o extra.o list.o
-OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
+_SRC=$(notdir $(shell find $(SDIR) -maxdepth 1 -name '*.c'))
+OBJ := $(addprefix $(ODIR)/,$(_SRC:%.c=%.o))
+
+_TEST=$(notdir $(shell find $(TDIR) -name '*.c'))
+TEST := $(addprefix $(TDIR)/,$(_TEST))
+
+BINS := $(addprefix $(BDIR)/,$(_TEST:%.c=%))
+
+all: $(OBJ)
+
+.PHONY: test
+
+test: $(BINS) $(TEST) $(OBJ)
+	$<
+
+.PHONY: info
+
+info:
+	$(info $$DEPS is [${DEPS}])
+	$(info $$OBJ is [${OBJ}])
+	$(info $$TEST is [${TEST}])
+	$(info $$BINS is [${BINS}])
 
 $(ODIR)/%.o: $(SDIR)/%.c $(DEPS) | $(ODIR)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-test: $(OBJ)
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+$(BINS): $(TEST) $(OBJ)
+	$(CC) -o $@ $< $(filter-out $<,$^) $(CFLAGS) $(LIBS)
 
 $(OBJ): | $(ODIR)
 
-$(ODIR):
+$(ODIR): | $(BDIR)
 	mkdir -p $@
 
-run: test
-	# export LD_LIBRARY_PATH=$(LDIR):$(LD_LIBRARY_PATH)
-	./test
+$(BDIR):
+	mkdir -p $@
 
 .PHONY: clean
 
 clean: 
 	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ 
+	find $(BDIR) -type f -delete
 
 # libjson.so:
 # 	mkdir -p libs libs/cjson libs/hash

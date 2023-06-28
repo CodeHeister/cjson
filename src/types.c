@@ -46,6 +46,10 @@ void *jsonGetValue(json_t *item) {
 				return (void*)(&item->c);
 				break;
 
+			case WCHAR:
+				return (void*)(&item->wc);
+				break;
+
 			default:
 				return item->value;
 		}
@@ -59,7 +63,7 @@ static void printList(json_t *list, PrintFlags flags) {
 	if (!list)
 		return;
 
-	printf("{ ");
+	printf("\033[0;37m{\033[0m ");
 	print_offset++;
 
 	json_t *item = list->next;
@@ -72,7 +76,7 @@ static void printList(json_t *list, PrintFlags flags) {
 
 			if (jsonGetType(item) != HASH_NODE) {
 				if (item->next != NULL)
-					printf(",");
+					printf("\033[0;37m,\033[0m");
 			}
 		}
 
@@ -82,17 +86,17 @@ static void printList(json_t *list, PrintFlags flags) {
 	print_offset--;
 	printf("\b \n");
 	for (size_t i = 0; i < print_offset; i++) printf(PRINT_GAP);
-	printf("}");
+	printf("\033[0;37m}\033[0m");
 }
 
 static void printNode(json_t *node, PrintFlags flags) {
 	if (!node || jsonGetType(node) != NODE)
 		return;
 
-	printf("\"%s\" : ", (char*)infoGetValue(infoFind("key", jsonGetInfo(node))));
+	printf("\033[1;36m%s\033[0;37m:\033[0m ", (char*)infoGetValue(infoFind("key", jsonGetInfo(node))));
 	if (!node->value) {
 
-		printf("-");
+		printf("\033[1;31m-\033[0m");
 	}
 	else {
 		
@@ -116,7 +120,7 @@ static void printHashNode(json_t *item, PrintFlags flags) {
 				printf(PRINT_GAP);
 			item->vtable->print(item, flags);
 
-			printf(",");
+			printf("\033[0;37m,\033[0;37m");
 		}
 
 		item = item->next;
@@ -131,7 +135,7 @@ static void printInt(json_t *item, PrintFlags flags) {
 	if (!item || jsonGetType(item) != ITEM || *(info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(item))) != INT)
 		return;
 
-	printf("\"%s\": %ld", (char*)infoGetValue(infoFind("key", jsonGetInfo(item))), item->i64);
+	printf("\033[1;36m%s\033[0;37m:\033[0m \033[0;35m%ld\033[0m", (char*)infoGetValue(infoFind("key", jsonGetInfo(item))), item->i64);
 }
 
 /* print unsigned int */
@@ -140,7 +144,7 @@ static void printUint(json_t *item, PrintFlags flags) {
 	if (!item || jsonGetType(item) != ITEM || *(info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(item))) != UINT)
 		return;
 
-	printf("\"%s\": %lu", (char*)infoGetValue(infoFind("key", jsonGetInfo(item))), item->u64);
+	printf("\033[1;36m%s\033[0;37m:\033[0m \033[0;35m%lu\033[0m", (char*)infoGetValue(infoFind("key", jsonGetInfo(item))), item->u64);
 }
 
 /* print char */
@@ -149,7 +153,7 @@ static void printChar(json_t *item, PrintFlags flags) {
 	if (!item || jsonGetType(item) != ITEM || *(info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(item))) != CHAR)
 		return;
 
-	printf("\"%s\": '%c'", (char*)infoGetValue(infoFind("key", jsonGetInfo(item))), item->c);
+	printf("\033[1;36m%s\033[0;37m:\033[0m \033[0;32m\"%c\"\033[0m", (char*)infoGetValue(infoFind("key", jsonGetInfo(item))), item->c);
 }
 
 void freeList(json_t *list) {

@@ -6,7 +6,6 @@
 
 #include <cjson/sha256.h>
 
-#define ROT(x, shift) ((x << shift) | (x >> ((sizeof(x) * CHAR_BIT - shift) % (sizeof(x) * CHAR_BIT)));)
 #define Ch(x, y, z) ((x & (y ^ z)) ^ z)
 #define Maj(x, y, z)    ((x & (y | z)) | (y & z))
 #define SHR(x, n)   (x >> n)
@@ -15,16 +14,6 @@
 #define S1(x)       (ROTR(x, 6) ^ ROTR(x, 11) ^ ROTR(x, 25))
 #define s0(x)       (ROTR(x, 7) ^ ROTR(x, 18) ^ (x >> 3))
 #define s1(x)       (ROTR(x, 17) ^ ROTR(x, 19) ^ (x >> 10))
-#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
-#define BYTE_TO_BINARY(byte)  \
-  ((byte) & 0x80 ? '1' : '0'), \
-  ((byte) & 0x40 ? '1' : '0'), \
-  ((byte) & 0x20 ? '1' : '0'), \
-  ((byte) & 0x10 ? '1' : '0'), \
-  ((byte) & 0x08 ? '1' : '0'), \
-  ((byte) & 0x04 ? '1' : '0'), \
-  ((byte) & 0x02 ? '1' : '0'), \
-  ((byte) & 0x01 ? '1' : '0') 
 
 #define HASH_LENGTH 8
 
