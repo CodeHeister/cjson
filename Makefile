@@ -1,5 +1,8 @@
 CC=gcc
+DBG=valgrind
+
 CFLAGS=-I$(IDIR) -Wall -Wshadow -Wvla -Wimplicit-function-declaration -pedantic -Werror
+DBGFLAGS=--leak-check=yes --leak-check=full --show-leak-kinds=all --track-origins=yes -s -q
 
 IDIR=include
 SDIR=src
@@ -28,12 +31,16 @@ all: $(OBJ)
 .PHONY: test
 
 test: $(BINS) $(TEST) $(OBJ)
-	$<
+	$(foreach BIN,$(BINS), \
+		time $(BIN) ; printf "\n" ; \
+		)
 
-.PHONY: valgrind
+.PHONY: debug
 
-valgrind: $(BINS) $(TEST) $(OBJ)
-	valgrind --leak-check=yes --leak-check=full --show-leak-kinds=all --track-origins=yes -s $<
+debug: $(BINS) $(TEST) $(OBJ)
+	$(foreach BIN,$(BINS), \
+		$(DBG) $(DBGFLAGS) $(BIN) ; printf "\n" ; \
+		)
 
 .PHONY: info
 
@@ -43,14 +50,14 @@ info:
 	$(info $$TEST is [${TEST}])
 	$(info $$BINS is [${BINS}])
 
-$(ODIR)/%.o: $(SDIR)/%.c $(DEPS) | $(ODIR)
-	$(CC) -c -o $@ $< $(CFLAGS)
-
 $(OBJ): $(OBJS)
 	ld -r $^ -o $(OBJ)
 
-$(BINS): $(TEST) $(OBJ)
-	$(CC) -o $@ $< $(filter-out $<,$^) $(CFLAGS) $(LIBS)
+$(ODIR)/%.o: $(SDIR)/%.c $(DEPS) | $(ODIR)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+$(BDIR)/%: $(TDIR)/%.c $(OBJ)
+	$(CC) -o $@ $< $(OBJ) $(CFLAGS) $(LIBS)
 
 $(OBJS): | $(ODIR)
 
@@ -63,8 +70,7 @@ $(BDIR):
 .PHONY: clean
 
 clean: 
-	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ 
-	find $(BDIR) -type f -delete
+	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ && find $(BDIR) -type f -delete
 
 # libjson.so:
 # 	mkdir -p libs libs/cjson libs/hash

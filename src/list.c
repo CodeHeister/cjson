@@ -314,6 +314,7 @@ bool jsonMove(json_t *dest, json_t *src) {
 	info_type_t *type = (info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(src)));
 
 	if (!type) {
+
 		dest->value = src->value;
 	}
 	else {
@@ -434,7 +435,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 			
 			check_item = check_item->next;
 		}
-		if (!check_item) {
+		if (!check_item && check_item != item) {
 
 			unshift(item, (json_t*)(hash_node->value));
 		}
@@ -455,4 +456,34 @@ bool jsonAdd(json_t *item, json_t *list) {
 	}
 
 	return 1;
+}
+
+json_t *jsonAddMultiple(json_t *item, ...) {
+	if (!item)
+		return NULL;
+
+	va_list args;
+	va_start(args, item);
+	 
+	json_t *list = item;
+
+	if (list != NULL) {
+		
+		for (; list && jsonGetType(list) != LIST; list = va_arg(args, json_t*));
+	}
+	else {
+
+		return NULL;
+	}
+
+	va_end(args);
+	va_start(args, item);
+
+	for (json_t *arg = item; arg != list; arg = va_arg(args, json_t*))
+		if (jsonAdd(arg, list) != 1)
+			return item;
+
+	va_end(args);
+
+	return list;
 }

@@ -20,10 +20,11 @@ int main() {
 	jsonAdd(jsonChar(u8"holder", '6'), jsonGet(u8"ぁ", new));
 
 	jsonPrint(new, PRINT_PLAIN);
+	printf("\n");
 
 	jsonDelete(new);
 
-	printf("\n");
+	/* ------------------ */
 
 	new = jsonNew(NULL);
 
@@ -38,6 +39,22 @@ int main() {
 	jsonAdd(jsonNode(u8"node", node), new);
 
 	jsonPrint(new, PRINT_PLAIN);
+	printf("\n");
+
+	jsonDelete(new);
+
+	/* ------------------ */
+
+	new = jsonAddMultiple(jsonInt(u8"test", 8), \
+			jsonInt(u8"test1", 9), \
+			jsonNode(u8"holder", \
+				jsonAddMultiple(jsonChar(u8"test", 'c'), \
+					jsonNew(NULL)
+					)), \
+			jsonNew(NULL));
+
+	jsonPrint(new, PRINT_PLAIN);
+	printf("\n");
 
 	jsonDelete(new);
 
