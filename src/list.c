@@ -7,11 +7,22 @@
 #include <cjson/base.h>
 #include <cjson/types.h>
 #include <cjson/extra.h>
-
-#include <chash/sha256.h>
+#include <cjson/sha256.h>
 
 json_t *jsonCheckJsonList(json_t *item) {
-	return (item != NULL && jsonGetType(item) == NODE) ? (json_t*)(item->value) : item;
+	if (!item)
+		return NULL;
+
+	type_t type = jsonGetType(item);
+
+	if (type == NODE) {
+		return (json_t*)(item->value);
+	}
+	else if (type == LIST) {
+		return item;
+	}
+
+	return NULL;
 }
 
 void jsonFree(json_t *item) {
@@ -64,7 +75,7 @@ json_t *jsonGetHashNodeByIndex(int index, json_t *list) {
 	if (!list)
 		return NULL;
 
-	size_t *hash_length = (size_t*)(infoGetValue(infoFind(L"hash_length", jsonGetInfo(list))));
+	size_t *hash_length = (size_t*)(infoGetValue(infoFind("hash_length", jsonGetInfo(list))));
 	if (index >= *hash_length)
 		return NULL;
 
@@ -108,13 +119,13 @@ void jsonSwapByIndex(int i1, int i2, json_t *head) {
 int jsonPartition(int low, int high, json_t *list) {
 
 	json_t *pivot = jsonGetHashNodeByIndex(high, list);
-	size_t *pivot_pos = (size_t*)(infoGetValue(infoFind(L"pos", jsonGetInfo(pivot))));
+	size_t *pivot_pos = (size_t*)(infoGetValue(infoFind("pos", jsonGetInfo(pivot))));
 
 	int i = low-1;
 	json_t *hash_node = jsonGetHashNodeByIndex(low, list);
 
 	for (int j = low; j <= high-1; j++) {
-		if (*(size_t*)(infoGetValue(infoFind(L"pos", jsonGetInfo(hash_node->next)))) < *pivot_pos) {
+		if (*(size_t*)(infoGetValue(infoFind("pos", jsonGetInfo(hash_node->next)))) < *pivot_pos) {
 			i++;
 			jsonSwapByIndex(i, j, list);
 			hash_node = jsonGetHashNodeByIndex(j, list);
@@ -146,7 +157,7 @@ void jsonQuickSortHashNodes(int low, int high, json_t *list) {
 	return;
 }
 
-json_t *jsonGet(wchar_t *key, json_t *list) {
+json_t *jsonGet(char *key, json_t *list) {
 
 	list = jsonCheckJsonList(list);
 	
@@ -154,7 +165,7 @@ json_t *jsonGet(wchar_t *key, json_t *list) {
 		return NULL;
 
 	// init 
-	hash_t *key_hash = wstr2sha256(key);
+	hash_t *key_hash = str2sha256(key);
 	json_t *hash_node = list->next;
 	json_t *item = NULL;
 	
@@ -162,7 +173,7 @@ json_t *jsonGet(wchar_t *key, json_t *list) {
 	
 	while (hash_node != NULL) {
 
-		if (key_mod < *(size_t*)infoGetValue(infoFind(L"pos", jsonGetInfo(hash_node))))
+		if (key_mod < *(size_t*)infoGetValue(infoFind("pos", jsonGetInfo(hash_node))))
 			break;
 
 		hash_node = hash_node->next;
@@ -175,12 +186,12 @@ json_t *jsonGet(wchar_t *key, json_t *list) {
 	
 	while (tmp_item != NULL) {
 		
-		hash_t *tmp_hash = (hash_t*)infoGetValue(infoFind(L"hash", jsonGetInfo(tmp_item)));
-		wchar_t *tmp_key = NULL;
+		hash_t *tmp_hash = (hash_t*)infoGetValue(infoFind("hash", jsonGetInfo(tmp_item)));
+		char *tmp_key = NULL;
 		
 		if (!tmp_hash) {
 			
-			tmp_key = (wchar_t*)infoGetValue(infoFind(L"key", jsonGetInfo(tmp_item)));
+			tmp_key = (char*)infoGetValue(infoFind("key", jsonGetInfo(tmp_item)));
 
 			if (!tmp_key) {
 
@@ -188,7 +199,7 @@ json_t *jsonGet(wchar_t *key, json_t *list) {
 			}
 			else {
 
-				tmp_hash = wstr2sha256(tmp_key);
+				tmp_hash = str2sha256(tmp_key);
 			}
 		}
 		
@@ -227,18 +238,18 @@ bool jsonGetMultiple(json_t *list, ...) {
 	va_list args;
 	va_start(args, list);
 	 
-	wchar_t *key = va_arg(args, wchar_t*);
+	char *key = va_arg(args, char*);
 
 	if (key != NULL) {
 
-		for (void *ptr = va_arg(args, void*); key != NULL; key = va_arg(args, wchar_t*), ptr = va_arg(args, void*)) {
+		for (void *ptr = va_arg(args, void*); key != NULL; key = va_arg(args, char*), ptr = va_arg(args, void*)) {
 
 			if (ptr != NULL) {
 				
 				json_t *item = jsonGet(key, list);
 				if (item != NULL) {
 					
-					info_type_t *type = (info_type_t*)infoGetValue(infoFind(L"type", jsonGetInfo(item)));
+					info_type_t *type = (info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(item)));
 
 					if (!type) {
 						ptr = item->value;
@@ -261,10 +272,6 @@ bool jsonGetMultiple(json_t *list, ...) {
 								*(char*)ptr = item->c;
 								break;
 
-							case WCHAR:
-								*(wchar_t*)ptr = item->wc;
-								break;
-
 							default:
 								ptr = item->value;
 						}
@@ -279,14 +286,14 @@ bool jsonGetMultiple(json_t *list, ...) {
 	return 1;
 }
 
-bool jsonMove(json_t *src, json_t *dest) {
+bool jsonMove(json_t *dest, json_t *src) {
 	if (!src || !dest)
 		return 0;
 
 	dest->type = src->type;
 	dest->value = src->value;
 	
-	info_type_t *type = (info_type_t*)infoGetValue(infoFind(L"type", jsonGetInfo(src)));
+	info_type_t *type = (info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(src)));
 
 	if (!type) {
 		dest->value = src->value;
@@ -309,10 +316,6 @@ bool jsonMove(json_t *src, json_t *dest) {
 				dest->c = src->c;
 				break;
 
-			case WCHAR:
-				dest->wc = src->wc;
-				break;
-
 			default:
 				dest->value = src->value;
 		}
@@ -324,8 +327,6 @@ bool jsonMove(json_t *src, json_t *dest) {
 	
 	infoMove(jsonGetInfo(src), jsonGetInfo(dest));
 	jsonFree(src);
-
-	src = NULL;
 
 	return 1;
 }
@@ -339,12 +340,12 @@ bool jsonAdd(json_t *item, json_t *list) {
 
 	json_t *hash_node = list->next;
 	
-	hash_t *tmp_hash = (hash_t*)infoGetValue(infoFind(L"hash", jsonGetInfo(item)));
-	wchar_t *tmp_key = NULL;
+	hash_t *tmp_hash = (hash_t*)infoGetValue(infoFind("hash", jsonGetInfo(item)));
+	char *tmp_key = NULL;
 	
 	if (!tmp_hash) {
 		
-		tmp_key = (wchar_t*)infoGetValue(infoFind(L"key", jsonGetInfo(item)));
+		tmp_key = (char*)infoGetValue(infoFind("key", jsonGetInfo(item)));
 
 		if (!tmp_key) {
 
@@ -352,7 +353,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 		}
 		else {
 
-			tmp_hash = wstr2sha256(tmp_key);
+			tmp_hash = str2sha256(tmp_key);
 		}
 	}
 
@@ -369,7 +370,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 
 	while (hash_node != NULL) {
 
-		if (key_mod < *(size_t*)infoGetValue(infoFind(L"pos", jsonGetInfo(hash_node))))
+		if (key_mod < *(size_t*)infoGetValue(infoFind("pos", jsonGetInfo(hash_node))))
 			break;
 
 		hash_node = hash_node->next;
@@ -384,12 +385,12 @@ bool jsonAdd(json_t *item, json_t *list) {
 	else {
 
 		json_t *check_item = (json_t*)(hash_node->value);
-		hash_t *key_hash = (hash_t*)infoGetValue(infoFind(L"hash", jsonGetInfo(item)));
+		hash_t *key_hash = (hash_t*)infoGetValue(infoFind("hash", jsonGetInfo(item)));
 		tmp_key = NULL;
 		
 		if (!key_hash) {
 			
-			tmp_key = (wchar_t*)infoGetValue(infoFind(L"key", jsonGetInfo(item)));
+			tmp_key = (char*)infoGetValue(infoFind("key", jsonGetInfo(item)));
 
 			if (!tmp_key) {
 
@@ -397,7 +398,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 			}
 			else {
 
-				key_hash = wstr2sha256(tmp_key);
+				key_hash = str2sha256(tmp_key);
 			}
 		}
 
@@ -406,7 +407,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 
 		while (check_item != NULL) {
 			
-			if (compareHash((hash_t*)infoGetValue(infoFind(L"hash", jsonGetInfo(check_item))), key_hash))
+			if (compareHash((hash_t*)infoGetValue(infoFind("hash", jsonGetInfo(check_item))), key_hash))
 				break;
 			
 			check_item = check_item->next;
@@ -417,8 +418,8 @@ bool jsonAdd(json_t *item, json_t *list) {
 		}
 		else {
 			
-			jsonMove(item, check_item);
-			jsonFree(item);
+			jsonFree(check_item);
+			jsonMove(check_item, item);
 
 			free(item);
 			item = NULL;

@@ -9,15 +9,14 @@ LDIR =lib
 #_LIBS=libcjson.so.1.0 libhash.so.1.0
 #LIBS=$(patsubst %,$(LDIR)/%,$(_DEPS))
 
-_DEPS=chash/sha256.h cjson/types.h cjson/base.h cjson/list.h cjson/cjson.h cjson/config.h cjson/extra.h
-DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
+_DEPS=types.h sha256.h base.h list.h cjson.h config.h extra.h
+DEPS = $(patsubst %,$(IDIR)/cjson/%,$(_DEPS))
 
 _OBJ=base.o sha256.o types.o test.o config.o extra.o list.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SDIR)/%.c $(DEPS) | $(ODIR)
 	$(CC) -c -o $@ $< $(CFLAGS)
-
 
 test: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)

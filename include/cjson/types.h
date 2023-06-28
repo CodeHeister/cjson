@@ -2,9 +2,9 @@
 #define CJSON_TYPES_H_
 
 #include <stdint.h>
-#include <stddef.h>
+#include <uchar.h>
 
-#include <chash/sha256.h>
+#include <cjson/sha256.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,7 +57,7 @@ typedef struct info_item {
 		int64_t i64;
 		uint64_t u64;
 		char c;
-		wchar_t wc;
+		char32_t wc;
 	};
 } info_item_t;
 
@@ -78,7 +78,7 @@ typedef struct json {
 		int64_t i64;
 		uint64_t u64;
 		char c;
-		wchar_t wc;
+		char32_t wc;
 	};
 	json_ftable_t *vtable;
 	json_t *next;
@@ -87,19 +87,19 @@ typedef struct json {
 typedef struct json_ftable {
 	void (*print)(json_t*, PrintFlags);	// print function
 	void (*free)(json_t*);
-	wchar_t *(*convert)(json_t*);
+	char *(*convert)(json_t*);
 } json_ftable_t;
 
 extern type_t jsonGetType(json_t*);
 extern info_t *jsonGetInfo(json_t*);
 extern void *jsonGetValue(json_t*);
 extern json_t *jsonNew(json_t*);
-extern json_t *jsonNode(const wchar_t*, json_t*);
+extern json_t *jsonNode(const char*, json_t*);
 extern json_t *jsonHashNode();
 extern json_t *jsonUnknown(void*, json_ftable_t*, json_t*);
-extern json_t *jsonInt(const wchar_t*, int64_t);
-extern json_t *jsonUint(const wchar_t*, uint64_t);
-extern json_t *jsonChar(const wchar_t*, char);
+extern json_t *jsonInt(const char*, int64_t);
+extern json_t *jsonUint(const char*, uint64_t);
+extern json_t *jsonChar(const char*, char);
 
 #ifdef __cplusplus
 }

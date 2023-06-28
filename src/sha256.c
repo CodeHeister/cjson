@@ -1,13 +1,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <stddef.h>
 #include <string.h>
-#include <math.h>
 #include <inttypes.h>
 
-#include <chash/sha256.h>
+#include <cjson/sha256.h>
 
+#define ROT(x, shift) ((x << shift) | (x >> ((sizeof(x) * CHAR_BIT - shift) % (sizeof(x) * CHAR_BIT)));)
 #define Ch(x, y, z) ((x & (y ^ z)) ^ z)
 #define Maj(x, y, z)    ((x & (y | z)) | (y & z))
 #define SHR(x, n)   (x >> n)
@@ -16,6 +15,16 @@
 #define S1(x)       (ROTR(x, 6) ^ ROTR(x, 11) ^ ROTR(x, 25))
 #define s0(x)       (ROTR(x, 7) ^ ROTR(x, 18) ^ (x >> 3))
 #define s1(x)       (ROTR(x, 17) ^ ROTR(x, 19) ^ (x >> 10))
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  ((byte) & 0x80 ? '1' : '0'), \
+  ((byte) & 0x40 ? '1' : '0'), \
+  ((byte) & 0x20 ? '1' : '0'), \
+  ((byte) & 0x10 ? '1' : '0'), \
+  ((byte) & 0x08 ? '1' : '0'), \
+  ((byte) & 0x04 ? '1' : '0'), \
+  ((byte) & 0x02 ? '1' : '0'), \
+  ((byte) & 0x01 ? '1' : '0') 
 
 #define HASH_LENGTH 8
 
@@ -40,100 +49,46 @@ static const uint32_t K[64] = {
 
 static char hex_sym[16] = "0123456789abcdef";
 
-wchar_t *str2wstr(const char *str) {
-
-    size_t len = strlen(str) + 1;
-    wchar_t* wstr = (wchar_t*)malloc(sizeof(wchar_t) * len);
-
-    mbstowcs(wstr, str, len);
-    return wstr;
-}
-
-hash_t *_wstr2sha256(const wchar_t *key) {
-
+hash_t *bytes2sha256(const char *key, size_t n) {
 	if (!key)
 		return NULL;
 
-	// create data pointer
-	uint32_t *data = NULL;
+	size_t size = (n+9) * 8;
+	size_t len_blk = (size-size%512)/512+1;
 
-	// create var for 512 bit block amount
-	size_t len_blk = 0;
+	char *tmp_data = (char*)malloc(len_blk*512);
+	hash_t *hash = (hash_t*)malloc(sizeof(hash_t) * HASH_LENGTH);
 
-	// create byte size var (including extra byte and size bytes) 
-	size_t size = 9;
-	
-	// iterator
-	size_t i = 0;
-	size_t j;
-	while (key[i] != '\0') {
-		
-		// size calculations excluding zero bytes
-		size += (size_t)ceil(log(key[i]) / log(256));
-		i++;
+	if (!hash || !tmp_data) {
+
+		free(tmp_data);
+		free(hash);
+
+		tmp_data = NULL;
+		hash = NULL;
+
+		return NULL;
 	}
-	
-	// 512 bit blocks amount
-	len_blk += (size_t)ceil(size*8/512.0);
 
-	// 8 bit data array
-	uint8_t *tmp_data = (uint8_t*)malloc(len_blk * 512);
-
-	// check if memory was allocated
 	if (!tmp_data)
 		return NULL;
 
-	// wipe garbage
-	for (j = 0; j < len_blk * 64; j++)
+	for (size_t j = 0; j < len_blk * 64; j++)
 		tmp_data[j] = 0;
 
-	// drop iterators
-	i = 0;
-	j = 0;
-
-	// fill 8 bit array
-	while (key[i] != '\0') {
-		// get current char size excluding zero bytes
-		size_t tmp_char_size = (size_t)ceil(log(key[i]) / log(256));
-
-		// iterate through char as 8 bit blocks
-		for (size_t g = tmp_char_size; g > 0; g--) {
-			// add 8 bit data in backward direction to 32 bit 
-			tmp_data[j/4*4+3-j%4] = (uint8_t)(key[i] >> (g-1) * 8);
-			j++;
-		}
-		i++;
+	{
+		size_t i = 0;
+		for (i = 0; key[i]; i++)
+			tmp_data[i+3-(i%4)*2] = key[i];
+		tmp_data[i+3-(i%4)*2] = (char)0x80;
 	}
-	// add extra byte
-	tmp_data[j/4*4+3-j%4] = 0x80;
 
-	// get size from byte size
-	uint32_t tmp_limit = (size_t)ceil(log((size-9) * 8) / log(256));
+	for (size_t j = 8, tmp_size = size-72, tmp_len_blk = len_blk*64; j > 0; j--)
+		tmp_data[tmp_len_blk-j+3-((tmp_len_blk-j)%4)*2] = (tmp_size >> (j-1)*8) & 0xff;
 
-	// get last index
-	size_t tmp_size = len_blk*64-1;
-
-	// get byte size for byte size
-	size_t tmp_bit_size = (size-9) * 8;
-
-	for (j = 0; j < tmp_limit; j++)
-		// iterate to add byte size to the end of data in backward direction to 32 bit
-		tmp_data[tmp_size-(3-j%4)] = (uint8_t)(tmp_bit_size >> j * 8);
-
-	// move 8 bit data to 32 bit
-	data = (uint32_t*)tmp_data;
-
-	uint32_t *tmp_storage = (uint32_t*)malloc(sizeof(uint32_t) * 64);
-	if (!tmp_storage) {
-
-		free(data);
-		data = NULL;
-
-		return NULL;
-	}
+	uint32_t *data = (uint32_t*)tmp_data;
 
 	// hash storage for calculations
-	hash_t *hash = (hash_t*)malloc(sizeof(uint32_t) * HASH_LENGTH);
 	hash[0] = 0x6A09E667;
 	hash[1] = 0xBB67AE85;
 	hash[2] = 0x3C6EF372;
@@ -143,7 +98,7 @@ hash_t *_wstr2sha256(const wchar_t *key) {
 	hash[6] = 0x1F83D9AB;
 	hash[7] = 0x5BE0CD19;
 
-	for (i = 0; i < len_blk; i++) {
+	for (size_t i = 0; i < len_blk; i++) {
 
 		hash_t a = hash[0];
 		hash_t b = hash[1];
@@ -154,15 +109,19 @@ hash_t *_wstr2sha256(const wchar_t *key) {
 		hash_t g = hash[6];
 		hash_t h = hash[7];
 
-		for (j = 0; j < 16; j++) 
+		uint32_t tmp_storage[64];
+
+		for (size_t j = 0; j < 16; j++) 
 			tmp_storage[j] = data[i*16+j];
 		
-		for (j = 0; j < 48; j++)
+		for (size_t j = 0; j < 48; j++)
 			tmp_storage[j+16] = tmp_storage[j] + s0(tmp_storage[j+1]) + tmp_storage[j+9] + s1(tmp_storage[j+14]);
 
-		for (j = 0; j < 64; j++) {
+		for (size_t j = 0; j < 64; j++) {
+
 			uint32_t tmp1 = h + S1(e) +	Ch(e, f, g) + tmp_storage[j] + K[j];
 			uint32_t tmp2 = Maj(a, b, c) + S0(a);
+			
 			h = g;
 			g = f;
 			f = e;
@@ -183,49 +142,43 @@ hash_t *_wstr2sha256(const wchar_t *key) {
 		hash[7] = hash[7] + h;
 	}
 	
-	free(tmp_storage);
-	free(data);
+	free(tmp_data);
 
-	tmp_storage = NULL;
 	data = NULL;
+	tmp_data = NULL;
 
 	return hash;
 }
 
-hash_t *str2sha256(const char *key) {	
+hash_t *str2sha256(const char *str) {
+	if (!str)
+		return NULL;
+
+	size_t length;
+	for (length = 0; str[length]; length++);
 	
-	wchar_t *tmp_key = str2wstr(key);
-	hash_t *result = _wstr2sha256(tmp_key);
-
-	free(tmp_key);
-	tmp_key = NULL;
-
-	return result;
+	return bytes2sha256(str, length);
 }
 
-hash_t *wstr2sha256(const wchar_t *key) {
-	return _wstr2sha256(key);
-}
-
-wchar_t *hash2str(const hash_t *hash) {
-
+char *hash2str(const hash_t *hash) {
 	if (!hash) 
 		return NULL;
 
-	wchar_t *result = (wchar_t*)malloc(sizeof(wchar_t) * 65);
+	char *result = (char*)malloc(sizeof(char) * 64);
 	if (!result)
 		return NULL;
 	
-	result[64] = '\0';
-
-	for (int i = 0; i < 64; i++) 
-		result[i] = hex_sym[(hash[i/8] >> (7-i%8)*4) & 15];
+	{
+		size_t i;
+		for (i = 0; i < 64; i++)
+			result[i] = hex_sym[ (hash[(i-i%8) / 8] >> (7-i%8) * 4) & 0xf ];
+		result[i] = '\0';
+	}
 
 	return result;
 }
 
 int compareHash(const hash_t *hash1, const hash_t *hash2) {
-
 	if (!hash1 || !hash2)
 		return -1;
 
@@ -247,14 +200,14 @@ void freeHash(hash_t *hash) {
 
 int printHash(const hash_t *hash) {
 
-	wchar_t *hash_str = hash2str(hash);
+	char *hash_str = hash2str(hash);
 	
 	if (!hash_str)  {
 		printf("\033[36mSHA256\033[39m : \033[31mno hash\033[39m");
 		return -1;
 	}
 
-	printf("\033[36mSHA256\033[39m : %ls", hash_str);
+	printf("\033[36mSHA256\033[39m : %s", hash_str);
 	
 	free(hash_str);
 	hash_str = NULL;
@@ -262,11 +215,9 @@ int printHash(const hash_t *hash) {
 	return 1;
 }
 
-uint32_t digits(uint32_t num_space, uint32_t n) {
-	return ceil(log(n)/log(num_space));
-}
-
 uint32_t sha256Mod(const hash_t *hash, uint32_t k) {
+	if (!hash)
+		return 0;
 
 	uint32_t rest = 0;
 	size_t hash_size = sizeof(*hash) * HASH_LENGTH * 8;

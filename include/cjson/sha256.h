@@ -9,9 +9,9 @@ extern "C" {
 
 typedef uint32_t hash_t;
 
+extern hash_t *bytes2sha256(const char*, size_t);
 extern hash_t *str2sha256(const char*);
-extern hash_t *wstr2sha256(const wchar_t*);
-extern wchar_t *hash2str(const hash_t*);
+extern char *hash2str(const hash_t*);
 extern int compareHash(const hash_t*, const hash_t*);
 extern int printHash(const hash_t*);
 extern void freeHash(hash_t*);

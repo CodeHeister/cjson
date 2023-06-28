@@ -9,6 +9,7 @@
 #include <cjson/types.h>
 #include <cjson/extra.h>
 #include <cjson/config.h>
+#include <cjson/sha256.h>
 
 type_t jsonGetType(json_t *item) {
 	return !item ? UNKNOWN : item->type;
@@ -22,7 +23,7 @@ void *jsonGetValue(json_t *item) {
 	if (!item)
 		return NULL;
 
-	info_type_t *type = (info_type_t*)infoGetValue(infoFind(L"type", jsonGetInfo(item)));
+	info_type_t *type = (info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(item)));
 
 	if (!type) {
 		return item->value;
@@ -43,10 +44,6 @@ void *jsonGetValue(json_t *item) {
 
 			case CHAR:
 				return (void*)(&item->c);
-				break;
-
-			case WCHAR:
-				return (void*)(&item->wc);
 				break;
 
 			default:
@@ -92,7 +89,7 @@ static void printNode(json_t *node, PrintFlags flags) {
 	if (!node || jsonGetType(node) != NODE)
 		return;
 
-	printf("\"%ls\" : ", (wchar_t*)infoGetValue(infoFind(L"key", jsonGetInfo(node))));
+	printf("\"%s\" : ", (char*)infoGetValue(infoFind("key", jsonGetInfo(node))));
 	if (!node->value) {
 
 		printf("-");
@@ -131,28 +128,28 @@ static void printHashNode(json_t *item, PrintFlags flags) {
 /* print int */
 
 static void printInt(json_t *item, PrintFlags flags) {
-	if (!item || jsonGetType(item) != ITEM || *(info_type_t*)infoGetValue(infoFind(L"type", jsonGetInfo(item))) != INT)
+	if (!item || jsonGetType(item) != ITEM || *(info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(item))) != INT)
 		return;
 
-	printf("\"%ls\": %ld", (wchar_t*)infoGetValue(infoFind(L"key", jsonGetInfo(item))), item->i64);
+	printf("\"%s\": %ld", (char*)infoGetValue(infoFind("key", jsonGetInfo(item))), item->i64);
 }
 
 /* print unsigned int */
 
 static void printUint(json_t *item, PrintFlags flags) {
-	if (!item || jsonGetType(item) != ITEM || *(info_type_t*)infoGetValue(infoFind(L"type", jsonGetInfo(item))) != UINT)
+	if (!item || jsonGetType(item) != ITEM || *(info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(item))) != UINT)
 		return;
 
-	printf("\"%ls\": %u", (wchar_t*)infoGetValue(infoFind(L"key", jsonGetInfo(item))), *(unsigned int*)jsonGetValue(item));
+	printf("\"%s\": %lu", (char*)infoGetValue(infoFind("key", jsonGetInfo(item))), item->u64);
 }
 
 /* print char */
 
 static void printChar(json_t *item, PrintFlags flags) {
-	if (!item || jsonGetType(item) != ITEM || *(info_type_t*)infoGetValue(infoFind(L"type", jsonGetInfo(item))) != CHAR)
+	if (!item || jsonGetType(item) != ITEM || *(info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(item))) != CHAR)
 		return;
 
-	printf("\"%ls\": '%c'", (wchar_t*)infoGetValue(infoFind(L"key", jsonGetInfo(item))), *(char*)jsonGetValue(item));
+	printf("\"%s\": '%c'", (char*)infoGetValue(infoFind("key", jsonGetInfo(item))), item->c);
 }
 
 void freeList(json_t *list) {
@@ -282,7 +279,7 @@ json_t *jsonHashNode() {
 	new_item->type = HASH_NODE;
 
 	size_t pos = rand_pos();
-	infoAdd(L"pos", UINT, &pos, info);
+	infoAdd("pos", UINT, &pos, info);
 
 	return new_item;
 }
@@ -317,20 +314,23 @@ json_t *jsonNew(json_t* const dest) {
 		}
 	}
 
-	infoAdd(L"hash_length", UINT, &hash_length, info);
+	infoAdd("hash_length", UINT, &hash_length, info);
 
 	jsonQuickSortHashNodes(0, hash_length-1, new_item);
 
 	return new_item;
 }
 
-json_t *jsonNode(const wchar_t *key, json_t *value) {
+json_t *jsonNode(const char *key, json_t *value) {
 
 	json_t *node = NULL;
 
 	if (value != NULL && jsonGetType((json_t*)value) == LIST) {
 
 		node = jsonUnknown(value, &json_node_vtable, NULL);
+
+		if (!node) 
+			return NULL;
 	}
 	else {
 
@@ -340,13 +340,15 @@ json_t *jsonNode(const wchar_t *key, json_t *value) {
 			return NULL;
 
 		node = jsonUnknown(list, &json_node_vtable, NULL);
+
+		if (!node) {
+			
+			jsonFree(list);
+			return NULL;
+		}
 	}
-		
 
-	if (!node) 
-		return NULL;
-
-	hash_t *hash = wstr2sha256(key);
+	hash_t *hash = str2sha256(key);
 
 	if (!node || !key) {
 		freeHash(hash);
@@ -358,27 +360,27 @@ json_t *jsonNode(const wchar_t *key, json_t *value) {
 		return NULL;
 	}
 
-	wchar_t *tmp_key = cloneWstr(key);
+	char *tmp_key = clone2str(key);
 
 	info_t *info = infoNew(2, jsonGetInfo(node));
 
 	node->type = NODE;
 
 	if (tmp_key != NULL)
-		infoAdd(L"key", WSTRING, tmp_key, info);
+		infoAdd("key", STRING, tmp_key, info);
 
 	if (hash != NULL)
-		infoAdd(L"hash", HASH, hash, info);
+		infoAdd("hash", HASH, hash, info);
 
 	return node;
 }
 
 /* int type */
 
-json_t *jsonInt(const wchar_t *key, int64_t value) {
+json_t *jsonInt(const char *key, int64_t value) {
 	
 	json_t *item = jsonUnknown(NULL, &json_int_vtable, NULL);
-	hash_t *hash = wstr2sha256(key);
+	hash_t *hash = str2sha256(key);
 
 	if (!item || !key) {
 		freeHash(hash);
@@ -395,26 +397,26 @@ json_t *jsonInt(const wchar_t *key, int64_t value) {
 	item->i64 = value;
 	item->type = ITEM;
 	
-	wchar_t *tmp_key = cloneWstr(key);
+	char *tmp_key = clone2str(key);
 
 	if (tmp_key != NULL)
-		infoAdd(L"key", WSTRING, tmp_key, info);
+		infoAdd("key", STRING, tmp_key, info);
 
 	info_type_t type = INT;
-	infoAdd(L"type", UINT, &type, info);
+	infoAdd("type", UINT, &type, info);
 
 	if (hash != NULL)
-		infoAdd(L"hash", HASH, hash, info);
+		infoAdd("hash", HASH, hash, info);
 	
 	return item;
 }
 
 /* unsigned int type */
 
-json_t *jsonUint(const wchar_t *key, uint64_t value) {
+json_t *jsonUint(const char *key, uint64_t value) {
 
 	json_t *item = jsonUnknown(NULL, &json_uint_vtable, NULL);
-	hash_t *hash = wstr2sha256(key);
+	hash_t *hash = str2sha256(key);
 
 	if (!item || !key) {
 		freeHash(hash);
@@ -431,26 +433,26 @@ json_t *jsonUint(const wchar_t *key, uint64_t value) {
 	item->u64 = value;
 	item->type = ITEM;
 
-	wchar_t *tmp_key = cloneWstr(key);
+	char *tmp_key = clone2str(key);
 
 	if (tmp_key != NULL)
-		infoAdd(L"key", WSTRING, tmp_key, info);
+		infoAdd("key", STRING, tmp_key, info);
 
 	info_type_t type = UINT;
-	infoAdd(L"type", UINT, &type, info);
+	infoAdd("type", UINT, &type, info);
 
 	if (hash != NULL)
-		infoAdd(L"hash", HASH, hash, info);
+		infoAdd("hash", HASH, hash, info);
 
 	return item;
 }
 
 /* char type */
 
-json_t *jsonChar(const wchar_t *key, char value) {
+json_t *jsonChar(const char *key, char value) {
 
 	json_t *item = jsonUnknown(NULL, &json_char_vtable, NULL);
-	hash_t *hash = wstr2sha256(key);
+	hash_t *hash = str2sha256(key);
 
 	if (!item || !key) {
 		freeHash(hash);
@@ -467,16 +469,16 @@ json_t *jsonChar(const wchar_t *key, char value) {
 	item->c = value;
 	item->type = ITEM;
 
-	wchar_t *tmp_key = cloneWstr(key);
+	char *tmp_key = clone2str(key);
 
 	if (tmp_key != NULL)
-		infoAdd(L"key", WSTRING, tmp_key, info);
+		infoAdd("key", STRING, tmp_key, info);
 
 	info_type_t type = CHAR;
-	infoAdd(L"type", UINT, &type, info);
+	infoAdd("type", UINT, &type, info);
 
 	if (hash != NULL)
-		infoAdd(L"hash", HASH, hash, info);
+		infoAdd("hash", HASH, hash, info);
 
 	return item;
 }

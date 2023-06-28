@@ -20,9 +20,9 @@ extern bool infoMove(info_t*, info_t*);
 extern bool infoFree(info_t*);
 extern info_t *infoNew(size_t, info_t*);
 extern info_t *infoResize(int, info_t*);
-extern info_t *infoAdd(wchar_t*, info_type_t, void*, info_t*);
-extern info_item_t *infoFind(wchar_t*, info_t*);
-extern bool infoRemove(wchar_t*, info_t*);
+extern info_t *infoAdd(char*, info_type_t, void*, info_t*);
+extern info_item_t *infoFind(char*, info_t*);
+extern bool infoRemove(char*, info_t*);
 
 #ifdef __cplusplus
 }

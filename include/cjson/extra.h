@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 extern size_t rand_pos();
-extern wchar_t *cloneWstr(const wchar_t*);
+extern char *clone2str(const char*);
 
 #ifdef __cplusplus
 }

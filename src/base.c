@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include <cjson/types.h>
+#include <cjson/sha256.h>
 
 json_t *getLast(json_t *list) {
 	if (!list)
@@ -291,11 +292,11 @@ info_t *infoResize(int size, info_t *info) {
 	return info;
 }
 
-info_t *infoAdd(wchar_t *key, info_type_t type, void *value, info_t *info) {
+info_t *infoAdd(char *key, info_type_t type, void *value, info_t *info) {
 	if (!info || !info->array)
 		return NULL;
 
-	hash_t *hash = wstr2sha256(key);
+	hash_t *hash = str2sha256(key);
 	if (key != NULL && !hash)
 		return NULL;
 
@@ -337,11 +338,11 @@ info_t *infoAdd(wchar_t *key, info_type_t type, void *value, info_t *info) {
 	return info;
 }
 
-info_item_t *infoFind(wchar_t *key, info_t *info) {
+info_item_t *infoFind(char *key, info_t *info) {
 	if (!info || !info->array)
 		return NULL;
 
-	hash_t *hash = wstr2sha256(key);
+	hash_t *hash = str2sha256(key);
 	if (!hash)
 		return NULL;
 
@@ -366,7 +367,7 @@ info_item_t *infoFind(wchar_t *key, info_t *info) {
 	return item;
 }
 
-bool infoRemove(wchar_t *key, info_t *info) {
+bool infoRemove(char *key, info_t *info) {
 	if (!info || !key)
 		return 0;
 	
