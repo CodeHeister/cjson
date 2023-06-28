@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I$(IDIR) -Wall -Wshadow -Wvla -Wimplicit-function-declaration -pedantic -lm -g3 -Werror
+CFLAGS=-I$(IDIR) -Wall -Wshadow -Wvla -Wimplicit-function-declaration -pedantic -Werror
 
 IDIR=include
 SDIR=src
@@ -15,7 +15,8 @@ _DEPS=types.h sha256.h base.h list.h cjson.h config.h extra.h
 DEPS = $(patsubst %,$(IDIR)/cjson/%,$(_DEPS))
 
 _SRC=$(notdir $(shell find $(SDIR) -maxdepth 1 -name '*.c'))
-OBJ := $(addprefix $(ODIR)/,$(_SRC:%.c=%.o))
+OBJS := $(addprefix $(ODIR)/,$(_SRC:%.c=%.o))
+OBJ = $(ODIR)/cjson.o
 
 _TEST=$(notdir $(shell find $(TDIR) -name '*.c'))
 TEST := $(addprefix $(TDIR)/,$(_TEST))
@@ -29,21 +30,29 @@ all: $(OBJ)
 test: $(BINS) $(TEST) $(OBJ)
 	$<
 
+.PHONY: valgrind
+
+valgrind: $(BINS) $(TEST) $(OBJ)
+	valgrind --leak-check=yes --leak-check=full --show-leak-kinds=all --track-origins=yes -s $<
+
 .PHONY: info
 
 info:
 	$(info $$DEPS is [${DEPS}])
-	$(info $$OBJ is [${OBJ}])
+	$(info $$OBJS is [${OBJS}])
 	$(info $$TEST is [${TEST}])
 	$(info $$BINS is [${BINS}])
 
 $(ODIR)/%.o: $(SDIR)/%.c $(DEPS) | $(ODIR)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
+$(OBJ): $(OBJS)
+	ld -r $^ -o $(OBJ)
+
 $(BINS): $(TEST) $(OBJ)
 	$(CC) -o $@ $< $(filter-out $<,$^) $(CFLAGS) $(LIBS)
 
-$(OBJ): | $(ODIR)
+$(OBJS): | $(ODIR)
 
 $(ODIR): | $(BDIR)
 	mkdir -p $@

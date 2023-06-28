@@ -105,4 +105,4 @@ extern json_t *jsonChar(const char*, char);
 }
 #endif
 
-#endif // CJSON_H_
+#endif // CJSON_TYPES_H_

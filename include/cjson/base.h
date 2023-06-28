@@ -28,4 +28,4 @@ extern bool infoRemove(char*, info_t*);
 }
 #endif
 
-#endif
+#endif	// CJSON_BASE_H_

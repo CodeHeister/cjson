@@ -49,6 +49,16 @@ void jsonFree(json_t *item) {
 	return;
 }
 
+void jsonDelete(json_t *item) {
+	if (!item)
+		return;
+
+	jsonFree(item);
+	free(item);
+
+	return;
+}
+
 void jsonPrint(json_t *item, PrintFlags flags) {
 	if (item != NULL && item->vtable != NULL)
 		item->vtable->print(item, flags);
@@ -179,8 +189,16 @@ json_t *jsonGet(char *key, json_t *list) {
 		hash_node = hash_node->next;
 	}
 
-	if (!hash_node)
+	if (list->next != NULL && !hash_node)
 		hash_node = list->next;
+
+	if (!hash_node) {
+
+		freeHash(key_hash);
+		key_hash = NULL;
+
+		return NULL;
+	}
 
 	json_t *tmp_item = (jsonGetType(hash_node) == HASH_NODE) ? (json_t*)jsonGetValue(hash_node) : NULL;
 	
@@ -376,7 +394,11 @@ bool jsonAdd(json_t *item, json_t *list) {
 		hash_node = hash_node->next;
 	}
 
-	hash_node = !hash_node ? list->next : hash_node;
+	if (list->next != NULL && !hash_node)
+		hash_node = list->next;
+
+	if (!hash_node)
+		return NULL;
 
 	if (!hash_node->value) {
 

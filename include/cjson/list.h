@@ -1,8 +1,9 @@
 #ifndef CJSON_LIST_H_
 #define CJSON_LIST_H_
 
-#include <stdint.h>
+#include <inttypes.h>
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdarg.h>
 
 #include <cjson/types.h>
@@ -13,6 +14,7 @@ extern "C" {
 
 extern json_t *jsonCheckJsonList(json_t*);
 extern void jsonFree(json_t*);
+extern void jsonDelete(json_t*);
 extern void jsonPrint(json_t*, PrintFlags);
 extern bool jsonAdd(json_t*, json_t*);
 extern bool jsonMove(json_t*, json_t*);
@@ -25,4 +27,4 @@ extern void jsonGetMultiple(json_t*, ...);
 }
 #endif
 
-#endif // CJSON_H_
+#endif // CJSON_LIST_H_
