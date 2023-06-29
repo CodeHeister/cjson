@@ -52,14 +52,7 @@ typedef enum print_flags {
 typedef struct info_item {
 	hash_t *hash;
 	info_type_t type;
-	union {
-		void *value;
-		double f64;
-		int64_t i64;
-		uint64_t u64;
-		char c;
-		char32_t wc;
-	};
+	void *value;
 } info_item_t;
 
 typedef struct info {
@@ -73,14 +66,7 @@ typedef struct json_ftable json_ftable_t;
 typedef struct json {
 	info_t info;
 	type_t type;
-	union {
-		void *value;
-		double f64;
-		int64_t i64;
-		uint64_t u64;
-		char c;
-		char32_t wc;
-	};
+	void *value;
 	json_ftable_t *vtable;
 	json_t *next;
 } json_t;
@@ -89,6 +75,7 @@ typedef struct json_ftable {
 	void (*print)(json_t*, PrintFlags);	// print function
 	void (*free)(json_t*);
 	char *(*convert)(json_t*);
+	void *(*clone)(json_t*);
 } json_ftable_t;
 
 extern type_t jsonGetType(json_t*);
@@ -104,6 +91,7 @@ extern json_t *jsonHashNode();
 extern json_t *jsonInt(const char*, int64_t);
 extern json_t *jsonUint(const char*, uint64_t);
 extern json_t *jsonChar(const char*, char);
+extern json_t *jsonString(const char*, char*);
 
 #ifdef __cplusplus
 }

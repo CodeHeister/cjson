@@ -37,6 +37,7 @@ int main() {
 	// add and merge main with node
 	jsonAdd(jsonChar(u8"буква", '5'), new);
 	jsonAdd(jsonNode(u8"node", node), new);
+	jsonAdd(jsonString(u8"string", u8"hello"), new);
 
 	jsonPrint(new, PRINT_PLAIN);
 	printf("\n");

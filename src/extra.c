@@ -9,12 +9,14 @@
 static int seeded = 0;
 
 size_t rand_pos() {
+
 	if (!seeded) {
+		
 		srand ( time(NULL) );
 		seeded = 1;
 	}
 
-	return (rand()*HASH_LIMIT)/RAND_MAX;
+	return (rand() * HASH_LIMIT) / RAND_MAX;
 }
 
 char *clone2str(const char *key) {

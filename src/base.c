@@ -57,32 +57,7 @@ void *infoGetValue(info_item_t *info) {
 	if (!info)
 		return NULL;
 	
-	info_type_t type = infoGetType(info);
-
-	switch (type) {
-		case INT:
-			return (void*)(&info->i64);
-			break;
-	
-		case UINT:
-			return (void*)(&info->u64);
-			break;
-
-		case DOUBLE:
-			return (void*)(&info->f64);
-			break;
-
-		case CHAR:
-			return (void*)(&info->c);
-			break;
-
-		case WCHAR:
-			return (void*)(&info->wc);
-			break;
-
-		default:
-			return info->value;
-	}
+	return info->value;
 
 	return NULL;
 }
@@ -93,31 +68,7 @@ bool infoSetItem(size_t i, hash_t *hash, info_type_t type, void *value, info_t *
 
 	info->array[i].hash = hash;
 	info->array[i].type = type;
-
-	switch (type) {
-		case INT:
-			info->array[i].i64 = *(int64_t*)(value);
-			break;
-	
-		case UINT:
-			info->array[i].u64 = *(uint64_t*)(value);
-			break;
-
-		case DOUBLE:
-			info->array[i].f64 = *(double*)(value);
-			break;
-
-		case CHAR:
-			info->array[i].c = *(char*)(value);
-			break;
-
-		case WCHAR:
-			info->array[i].wc = *(char32_t*)(value);
-			break;
-
-		default:
-			info->array[i].value = value;
-	}
+	info->array[i].value = value;
 
 	return 1;
 }
@@ -189,9 +140,8 @@ bool infoFreeItem(size_t index, info_t *info) {
 	if (!info || index >= info->length)
 		return 0;
 	
-	freeHash(info->array[index].hash);
-	if (info->array[index].type >= STRING)
-		free(info->array[index].value);
+	sha256Delete(info->array[index].hash);
+	free(info->array[index].value);
 
 	info->array[index].hash = NULL;
 	info->array[index].value = NULL;
@@ -355,14 +305,14 @@ info_item_t *infoFind(char *key, info_t *info) {
 
 	for (i = 0; i < info->length; i++, modIndex = (i+mod)%info->length) {
 
-		if (compareHash(infoGetHash(&info->array[modIndex]), hash)) {
+		if (sha256Compare(infoGetHash(&info->array[modIndex]), hash)) {
 		
 			item = &info->array[modIndex];
 			break;
 		}
 	}
 
-	freeHash(hash);
+	sha256Delete(hash);
 	hash = NULL;
 
 	return item;
@@ -376,7 +326,7 @@ bool infoRemove(char *key, info_t *info) {
 	if (!item)
 		return 0;
 
-	freeHash(item->hash);
+	sha256Delete(item->hash);
 	if (item->type >= STRING)
 		free(item->value);
 

@@ -149,7 +149,7 @@ hash_t *str2sha256(const char *str) {
 	return bytes2sha256(str, length);
 }
 
-char *hash2str(const hash_t *hash) {
+char *sha2562str(const hash_t *hash) {
 	if (!hash) 
 		return NULL;
 
@@ -167,7 +167,7 @@ char *hash2str(const hash_t *hash) {
 	return result;
 }
 
-int compareHash(const hash_t *hash1, const hash_t *hash2) {
+int sha256Compare(const hash_t *hash1, const hash_t *hash2) {
 	if (!hash1 || !hash2)
 		return -1;
 
@@ -178,18 +178,26 @@ int compareHash(const hash_t *hash1, const hash_t *hash2) {
 	return 1;
 }
 
-void freeHash(hash_t *hash) {
+void sha256Free(hash_t *hash) {
 	if (!hash)
 		return;
 	
+	return;
+}
+
+void sha256Delete(hash_t *hash) {
+	if (!hash)
+		return;
+	
+	sha256Free(hash);
 	free(hash);
 
 	return;
 }
 
-int printHash(const hash_t *hash) {
+int sha256Print(const hash_t *hash) {
 
-	char *hash_str = hash2str(hash);
+	char *hash_str = sha2562str(hash);
 	
 	if (!hash_str)  {
 		printf("\033[36mSHA256\033[39m : \033[31mno hash\033[39m");

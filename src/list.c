@@ -29,21 +29,15 @@ void jsonFree(json_t *item) {
 	if (!item)
 		return;
 
-	if (!item->vtable || !item->vtable->free) {
+	if (item->vtable && item->vtable->free) {
 
-		free(item->value);
-		item->value = NULL;
-	}
-	else {
-		
 		item->vtable->free(item);
+		item->value = NULL;
 	}
 
 	infoFree(jsonGetInfo(item));
 
-	if (item->vtable != NULL)
-		item->vtable = NULL;
-
+	item->vtable = NULL;
 	item->type = UNKNOWN;
 
 	return;
@@ -194,7 +188,7 @@ json_t *jsonGet(char *key, json_t *list) {
 
 	if (!hash_node) {
 
-		freeHash(key_hash);
+		sha256Delete(key_hash);
 		key_hash = NULL;
 
 		return NULL;
@@ -221,13 +215,13 @@ json_t *jsonGet(char *key, json_t *list) {
 			}
 		}
 		
-		if (tmp_hash != NULL && compareHash(tmp_hash, key_hash)) {
+		if (tmp_hash != NULL && sha256Compare(tmp_hash, key_hash)) {
 		
 			item = tmp_item;
 
 			if (tmp_key != NULL) {
 
-				freeHash(tmp_hash);
+				sha256Delete(tmp_hash);
 				tmp_hash = NULL;
 			}
 
@@ -236,14 +230,14 @@ json_t *jsonGet(char *key, json_t *list) {
 		
 		if (tmp_key != NULL) {
 
-			freeHash(tmp_hash);
+			sha256Delete(tmp_hash);
 			tmp_hash = NULL;
 		}
 
 		tmp_item = tmp_item->next;
 	}
 
-	freeHash(key_hash);
+	sha256Delete(key_hash);
 	key_hash = NULL;
 
 	return item;
@@ -265,36 +259,9 @@ bool jsonGetMultiple(json_t *list, ...) {
 			if (ptr != NULL) {
 				
 				json_t *item = jsonGet(key, list);
-				if (item != NULL) {
-					
-					info_type_t *type = (info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(item)));
 
-					if (!type) {
-						ptr = item->value;
-					}
-					else {
-						switch (*type) {
-							case INT:
-								*(int64_t*)ptr = item->i64;
-								break;
-						
-							case UINT:
-								*(uint64_t*)ptr = item->u64;
-								break;
-
-							case DOUBLE:
-								*(double*)ptr = item->f64;
-								break;
-
-							case CHAR:
-								*(char*)ptr = item->c;
-								break;
-
-							default:
-								ptr = item->value;
-						}
-					}
-				}
+				if (item != NULL)
+						ptr = jsonGetValue(item);
 			}
 		}
 	}
@@ -310,36 +277,6 @@ bool jsonMove(json_t *dest, json_t *src) {
 
 	dest->type = src->type;
 	dest->value = src->value;
-	
-	info_type_t *type = (info_type_t*)infoGetValue(infoFind("type", jsonGetInfo(src)));
-
-	if (!type) {
-
-		dest->value = src->value;
-	}
-	else {
-		switch (*type) {
-			case INT:
-				dest->i64 = src->i64;
-				break;
-		
-			case UINT:
-				dest->u64 = src->u64;
-				break;
-
-			case DOUBLE:
-				dest->f64 = src->f64;
-				break;
-
-			case CHAR:
-				dest->c = src->c;
-				break;
-
-			default:
-				dest->value = src->value;
-		}
-	}
-
 	dest->vtable = src->vtable;
 
 	src->value = NULL;
@@ -384,7 +321,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 	if (tmp_key != NULL) {
 
 		tmp_hash = NULL;
-		freeHash(tmp_hash);
+		sha256Delete(tmp_hash);
 	}
 
 	while (hash_node != NULL) {
@@ -430,7 +367,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 
 		while (check_item != NULL) {
 			
-			if (compareHash((hash_t*)infoGetValue(infoFind("hash", jsonGetInfo(check_item))), key_hash))
+			if (sha256Compare((hash_t*)infoGetValue(infoFind("hash", jsonGetInfo(check_item))), key_hash))
 				break;
 			
 			check_item = check_item->next;
@@ -450,7 +387,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 
 		if (tmp_key != NULL) {
 
-			freeHash(key_hash);
+			sha256Delete(key_hash);
 			key_hash = NULL;
 		}
 	}
