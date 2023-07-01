@@ -9,11 +9,11 @@
 #include <cjson/extra.h>
 #include <cjson/sha256.h>
 
-json_t *jsonCheckJsonList(json_t *item) {
+json_t *jsonCheckIfList(json_t *item) {
 	if (!item)
 		return NULL;
 
-	type_t type = jsonGetType(item);
+	type_t type = jsonType(item);
 
 	if (type == NODE) {
 		return (json_t*)(item->value);
@@ -35,7 +35,7 @@ void jsonFree(json_t *item) {
 		item->value = NULL;
 	}
 
-	infoFree(jsonGetInfo(item));
+	infoFree(jsonInfo(item));
 
 	item->vtable = NULL;
 	item->type = UNKNOWN;
@@ -74,12 +74,12 @@ json_t *jsonGetByIndex(size_t index, json_t *list) {
 
 json_t *jsonGetHashNodeByIndex(int index, json_t *list) {
     
-	list = jsonCheckJsonList(list);
+	list = jsonCheckIfList(list);
 
 	if (!list)
 		return NULL;
 
-	size_t *hash_length = (size_t*)(infoGetValue(infoFind("hash_length", jsonGetInfo(list))));
+	size_t *hash_length = (size_t*)(infoGetValue("hash_length", jsonInfo(list)));
 	if (index >= *hash_length)
 		return NULL;
 
@@ -123,13 +123,14 @@ void jsonSwapByIndex(int i1, int i2, json_t *head) {
 int jsonPartition(int low, int high, json_t *list) {
 
 	json_t *pivot = jsonGetHashNodeByIndex(high, list);
-	size_t *pivot_pos = (size_t*)(infoGetValue(infoFind("pos", jsonGetInfo(pivot))));
+	size_t *pivot_pos = (size_t*)infoGetValue("pos", jsonInfo(pivot));
 
 	int i = low-1;
 	json_t *hash_node = jsonGetHashNodeByIndex(low, list);
 
 	for (int j = low; j <= high-1; j++) {
-		if (*(size_t*)(infoGetValue(infoFind("pos", jsonGetInfo(hash_node->next)))) < *pivot_pos) {
+		size_t *pos = (size_t*)infoGetValue("pos", jsonInfo(hash_node->next));
+		if (pos && *pos < *pivot_pos) {
 			i++;
 			jsonSwapByIndex(i, j, list);
 			hash_node = jsonGetHashNodeByIndex(j, list);
@@ -143,14 +144,15 @@ int jsonPartition(int low, int high, json_t *list) {
 	return (i+1);
 }
 
-void jsonQuickSortHashNodes(int low, int high, json_t *list) {
- 
-	list = jsonCheckJsonList(list);
+void jsonQuickSortHashNodes(int low, int high, json_t *list)
+{ 
+	list = jsonCheckIfList(list);
 	
 	if (!list)
 		return;
 
-	if (low < high) {
+	if (low < high)
+	{
 		int pi = jsonPartition(low, high, list);
 
 		jsonQuickSortHashNodes(low, pi - 1, list);
@@ -161,9 +163,9 @@ void jsonQuickSortHashNodes(int low, int high, json_t *list) {
 	return;
 }
 
-json_t *jsonGet(char *key, json_t *list) {
-
-	list = jsonCheckJsonList(list);
+json_t *jsonGet(const char *key, json_t *list)
+{
+	list = jsonCheckIfList(list);
 	
 	if (!list || !key)
 		return NULL;
@@ -175,9 +177,11 @@ json_t *jsonGet(char *key, json_t *list) {
 	
 	uint32_t key_mod = sha256Mod(key_hash, HASH_LIMIT);
 	
-	while (hash_node != NULL) {
+	while (hash_node)
+	{
+		size_t *pos = (size_t*)infoGetValue("pos", jsonInfo(hash_node));
 
-		if (key_mod < *(size_t*)infoGetValue(infoFind("pos", jsonGetInfo(hash_node))))
+		if (pos && key_mod < *pos)
 			break;
 
 		hash_node = hash_node->next;
@@ -186,41 +190,37 @@ json_t *jsonGet(char *key, json_t *list) {
 	if (list->next != NULL && !hash_node)
 		hash_node = list->next;
 
-	if (!hash_node) {
-
+	if (!hash_node)
+	{
 		sha256Delete(key_hash);
 		key_hash = NULL;
 
 		return NULL;
 	}
 
-	json_t *tmp_item = (jsonGetType(hash_node) == HASH_NODE) ? (json_t*)jsonGetValue(hash_node) : NULL;
+	json_t *tmp_item = (jsonType(hash_node) == HASH_NODE) ? (json_t*)jsonValue(hash_node) : NULL;
 	
-	while (tmp_item != NULL) {
-		
-		hash_t *tmp_hash = (hash_t*)infoGetValue(infoFind("hash", jsonGetInfo(tmp_item)));
+	while (tmp_item)
+	{
+		hash_t *tmp_hash = (hash_t*)infoGetValue("hash", jsonInfo(tmp_item));
 		char *tmp_key = NULL;
 		
-		if (!tmp_hash) {
-			
-			tmp_key = (char*)infoGetValue(infoFind("key", jsonGetInfo(tmp_item)));
+		if (!tmp_hash)
+		{
+			tmp_key = (char*)infoGetValue("key", jsonInfo(tmp_item));
 
-			if (!tmp_key) {
-
+			if (!tmp_key)
 				tmp_hash = NULL;
-			}
-			else {
-
+			else
 				tmp_hash = str2sha256(tmp_key);
-			}
 		}
 		
-		if (tmp_hash != NULL && sha256Compare(tmp_hash, key_hash)) {
-		
+		if (tmp_hash && sha256Compare(tmp_hash, key_hash))
+		{
 			item = tmp_item;
 
-			if (tmp_key != NULL) {
-
+			if (tmp_key)
+			{
 				sha256Delete(tmp_hash);
 				tmp_hash = NULL;
 			}
@@ -228,8 +228,8 @@ json_t *jsonGet(char *key, json_t *list) {
 			break;
 		}
 		
-		if (tmp_key != NULL) {
-
+		if (tmp_key)
+		{
 			sha256Delete(tmp_hash);
 			tmp_hash = NULL;
 		}
@@ -243,7 +243,40 @@ json_t *jsonGet(char *key, json_t *list) {
 	return item;
 }
 
+void *jsonGetValue(char *key, json_t *list)
+{
+	return (key && list) ? jsonGet(key, list) : NULL;
+}
+
 bool jsonGetMultiple(json_t *list, ...) {
+	if (!list)
+		return 0;
+
+	va_list args;
+	va_start(args, list);
+	 
+	char *key = va_arg(args, char*);
+
+	if (key)
+	{
+		for (void *ptr = va_arg(args, void*); key != NULL; key = va_arg(args, char*), ptr = va_arg(args, json_t*)) {
+
+			if (ptr != NULL) {
+				
+				json_t *item = jsonGet(key, list);
+
+				if (item != NULL)
+						ptr = item;
+			}
+		}
+	}
+
+	va_end(args);
+
+	return 1;
+}
+
+bool jsonGetMultipleValues(json_t *list, ...) {
 	if (!list)
 		return 0;
 
@@ -261,7 +294,7 @@ bool jsonGetMultiple(json_t *list, ...) {
 				json_t *item = jsonGet(key, list);
 
 				if (item != NULL)
-						ptr = jsonGetValue(item);
+						ptr = jsonValue(item);
 			}
 		}
 	}
@@ -281,7 +314,7 @@ bool jsonMove(json_t *dest, json_t *src) {
 
 	src->value = NULL;
 	
-	infoMove(jsonGetInfo(src), jsonGetInfo(dest));
+	infoMove(jsonInfo(src), jsonInfo(dest));
 	jsonFree(src);
 
 	return 1;
@@ -289,19 +322,19 @@ bool jsonMove(json_t *dest, json_t *src) {
 
 bool jsonAdd(json_t *item, json_t *list) {
 	
-	list = jsonCheckJsonList(list);
+	list = jsonCheckIfList(list);
 	
 	if (!list || !item)
 		return 0;
 
 	json_t *hash_node = list->next;
 	
-	hash_t *tmp_hash = (hash_t*)infoGetValue(infoFind("hash", jsonGetInfo(item)));
+	hash_t *tmp_hash = (hash_t*)infoGetValue("hash", jsonInfo(item));
 	char *tmp_key = NULL;
 	
 	if (!tmp_hash) {
 		
-		tmp_key = (char*)infoGetValue(infoFind("key", jsonGetInfo(item)));
+		tmp_key = (char*)infoGetValue("key", jsonInfo(item));
 
 		if (!tmp_key) {
 
@@ -314,7 +347,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 	}
 
 	if (!tmp_hash)
-		return NULL;
+		return 0;
 
 	uint32_t key_mod = sha256Mod(tmp_hash, HASH_LIMIT);
 
@@ -326,7 +359,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 
 	while (hash_node != NULL) {
 
-		if (key_mod < *(size_t*)infoGetValue(infoFind("pos", jsonGetInfo(hash_node))))
+		if (key_mod < *(size_t*)infoGetValue("pos", jsonInfo(hash_node)))
 			break;
 
 		hash_node = hash_node->next;
@@ -345,12 +378,12 @@ bool jsonAdd(json_t *item, json_t *list) {
 	else {
 
 		json_t *check_item = (json_t*)(hash_node->value);
-		hash_t *key_hash = (hash_t*)infoGetValue(infoFind("hash", jsonGetInfo(item)));
+		hash_t *key_hash = (hash_t*)infoGetValue("hash", jsonInfo(item));
 		tmp_key = NULL;
 		
 		if (!key_hash) {
 			
-			tmp_key = (char*)infoGetValue(infoFind("key", jsonGetInfo(item)));
+			tmp_key = (char*)infoGetValue("key", jsonInfo(item));
 
 			if (!tmp_key) {
 
@@ -367,7 +400,7 @@ bool jsonAdd(json_t *item, json_t *list) {
 
 		while (check_item != NULL) {
 			
-			if (sha256Compare((hash_t*)infoGetValue(infoFind("hash", jsonGetInfo(check_item))), key_hash))
+			if (sha256Compare((hash_t*)infoGetValue("hash", jsonInfo(check_item)), key_hash))
 				break;
 			
 			check_item = check_item->next;
@@ -406,7 +439,7 @@ json_t *jsonAddMultiple(json_t *item, ...) {
 
 	if (list != NULL) {
 		
-		for (; list && jsonGetType(list) != LIST; list = va_arg(args, json_t*));
+		for (; list && jsonType(list) != LIST; list = va_arg(args, json_t*));
 	}
 	else {
 

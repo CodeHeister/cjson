@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <locale.h>
+#include <assert.h>
 
 #include <cjson/cjson.h>
+#include <cjson/base.h>
 
 int main() {
 	
@@ -14,6 +16,12 @@ int main() {
 	json_t *u = jsonUint(u8"test", 8);
 	json_t *c = jsonChar(u8"test", 'c');
 	json_t *s = jsonString(u8"test", u8"тест");
+
+	assert(new);
+	assert(i);
+	assert(u);
+	assert(c);
+	assert(s);
 
 	jsonPrint(new, PRINT_PLAIN);
 	jsonPrint(i, PRINT_PLAIN);

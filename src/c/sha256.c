@@ -2,18 +2,17 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
 
 #include <cjson/sha256.h>
 
-#define Ch(x, y, z) ((x & (y ^ z)) ^ z)
-#define Maj(x, y, z)    ((x & (y | z)) | (y & z))
-#define SHR(x, n)   (x >> n)
-#define ROTR(x, n)  ((x >> n) | (x << (32 - n)))
-#define S0(x)       (ROTR(x, 2) ^ ROTR(x, 13) ^ ROTR(x, 22))
-#define S1(x)       (ROTR(x, 6) ^ ROTR(x, 11) ^ ROTR(x, 25))
-#define s0(x)       (ROTR(x, 7) ^ ROTR(x, 18) ^ (x >> 3))
-#define s1(x)       (ROTR(x, 17) ^ ROTR(x, 19) ^ (x >> 10))
+#define Ch(x, y, z)	((x & (y ^ z)) ^ z)
+#define Maj(x, y, z) ((x & (y | z)) | (y & z))
+#define SHR(x, n) (x >> n)
+#define ROTR(x, n) ((x >> n) | (x << (32 - n)))
+#define S0(x) (ROTR(x, 2) ^ ROTR(x, 13) ^ ROTR(x, 22))
+#define S1(x) (ROTR(x, 6) ^ ROTR(x, 11) ^ ROTR(x, 25))
+#define s0(x) (ROTR(x, 7) ^ ROTR(x, 18) ^ (x >> 3))
+#define s1(x) (ROTR(x, 17) ^ ROTR(x, 19) ^ (x >> 10))
 
 #define HASH_LENGTH 8
 
@@ -38,7 +37,8 @@ static const uint32_t K[64] = {
 
 static char hex_sym[16] = "0123456789abcdef";
 
-hash_t *bytes2sha256(const char *key, size_t n) {
+hash_t *bytes2sha256(const char *key, size_t n)
+{
 	if (!key)
 		return NULL;
 
@@ -48,8 +48,8 @@ hash_t *bytes2sha256(const char *key, size_t n) {
 	char *tmp_data = (char*)malloc(len_blk*512);
 	hash_t *hash = (hash_t*)malloc(sizeof(hash_t) * HASH_LENGTH);
 
-	if (!hash || !tmp_data) {
-
+	if (!hash || !tmp_data)
+	{
 		free(tmp_data);
 		free(hash);
 
@@ -87,8 +87,8 @@ hash_t *bytes2sha256(const char *key, size_t n) {
 	hash[6] = 0x1F83D9AB;
 	hash[7] = 0x5BE0CD19;
 
-	for (size_t i = 0; i < len_blk; i++) {
-
+	for (size_t i = 0; i < len_blk; i++)
+	{
 		hash_t a = hash[0];
 		hash_t b = hash[1];
 		hash_t c = hash[2];
@@ -106,8 +106,8 @@ hash_t *bytes2sha256(const char *key, size_t n) {
 		for (size_t j = 0; j < 48; j++)
 			tmp_storage[j+16] = tmp_storage[j] + s0(tmp_storage[j+1]) + tmp_storage[j+9] + s1(tmp_storage[j+14]);
 
-		for (size_t j = 0; j < 64; j++) {
-
+		for (size_t j = 0; j < 64; j++)
+		{
 			uint32_t tmp1 = h + S1(e) +	Ch(e, f, g) + tmp_storage[j] + K[j];
 			uint32_t tmp2 = Maj(a, b, c) + S0(a);
 			
@@ -139,7 +139,8 @@ hash_t *bytes2sha256(const char *key, size_t n) {
 	return hash;
 }
 
-hash_t *str2sha256(const char *str) {
+hash_t *str2sha256(const char *str)
+{
 	if (!str)
 		return NULL;
 
@@ -149,11 +150,12 @@ hash_t *str2sha256(const char *str) {
 	return bytes2sha256(str, length);
 }
 
-char *sha2562str(const hash_t *hash) {
+char *sha2562str(const hash_t *hash)
+{
 	if (!hash) 
 		return NULL;
 
-	char *result = (char*)malloc(sizeof(char) * 64);
+	char *result = (char*)malloc(sizeof(char) * 65);
 	if (!result)
 		return NULL;
 	
@@ -167,7 +169,8 @@ char *sha2562str(const hash_t *hash) {
 	return result;
 }
 
-int sha256Compare(const hash_t *hash1, const hash_t *hash2) {
+int sha256Compare(const hash_t *hash1, const hash_t *hash2)
+{
 	if (!hash1 || !hash2)
 		return -1;
 
@@ -178,14 +181,16 @@ int sha256Compare(const hash_t *hash1, const hash_t *hash2) {
 	return 1;
 }
 
-void sha256Free(hash_t *hash) {
+void sha256Free(hash_t *hash)
+{
 	if (!hash)
 		return;
 	
 	return;
 }
 
-void sha256Delete(hash_t *hash) {
+void sha256Delete(hash_t *hash)
+{
 	if (!hash)
 		return;
 	
@@ -195,16 +200,17 @@ void sha256Delete(hash_t *hash) {
 	return;
 }
 
-int sha256Print(const hash_t *hash) {
-
+int sha256Print(const hash_t *hash)
+{
 	char *hash_str = sha2562str(hash);
 	
-	if (!hash_str)  {
-		printf("\033[36mSHA256\033[39m : \033[31mno hash\033[39m");
+	if (!hash_str)
+	{
+		printf("\033[36mSHA256\033[0m : \033[31mno hash\033[0m");
 		return -1;
 	}
 
-	printf("\033[36mSHA256\033[39m : %s", hash_str);
+	printf("\033[36mSHA256\033[0m : %s", hash_str);
 	
 	free(hash_str);
 	hash_str = NULL;
@@ -212,17 +218,21 @@ int sha256Print(const hash_t *hash) {
 	return 1;
 }
 
-uint32_t sha256Mod(const hash_t *hash, uint32_t k) {
+uint32_t sha256Mod(const hash_t *hash, uint32_t k)
+{
 	if (!hash)
 		return 0;
 
-	uint32_t rest = 0;
+	uint32_t r = 0;
 	size_t hash_size = sizeof(*hash) * HASH_LENGTH * 8;
-	for (size_t i = hash_size; i-->0;) {
-		uint32_t num = (rest << 1) | (hash[(hash_size-i-1) / (sizeof(*hash) * 8)] >> i & 1);
-		rest = (num >= k) ? num - k : num;
+
+	for (size_t i = hash_size; i-->0;)
+	{
+		uint32_t num = (r << 1) | ( hash[ (hash_size-i-1) / (sizeof(*hash) * 8) ] >> i & 1 );
+		
+		r = (num >= k) ? num - k : num;
 	}
 	
-	return rest;
+	return r;
 }
 

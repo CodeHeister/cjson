@@ -1,15 +1,15 @@
 CC=gcc
 DBG=valgrind
 
-CFLAGS=-I$(IDIR) -Wall -Wshadow -Wvla -Wimplicit-function-declaration -pedantic -Werror -g3
+CFLAGS=-I$(IDIR) -Wall -Wshadow -Wvla -Wimplicit-function-declaration -pedantic -Werror -O3
 DBGFLAGS=--leak-check=yes --leak-check=full --show-leak-kinds=all --track-origins=yes -s -q
 
 IDIR=include
-SDIR=src
-BDIR=build
 LDIR=lib
-ODIR=$(BDIR)/obj
-TDIR=$(SDIR)/tests
+SDIR=src/c
+TDIR=src/tests
+BDIR=build/bin
+ODIR=build/obj
 
 #_LIBS=libcjson.so.1.0 libhash.so.1.0
 #LIBS=$(patsubst %,$(LDIR)/%,$(_DEPS))
@@ -64,13 +64,16 @@ $(OBJS): | $(ODIR)
 $(ODIR): | $(BDIR)
 	mkdir -p $@
 
-$(BDIR):
+$(BDIR): | build
+	mkdir -p $@
+
+build:
 	mkdir -p $@
 
 .PHONY: clean
 
 clean: 
-	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ && find $(BDIR) -type f -delete
+	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~
 
 # libjson.so:
 # 	mkdir -p libs libs/cjson libs/hash

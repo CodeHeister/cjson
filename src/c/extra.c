@@ -8,10 +8,10 @@
 
 static int seeded = 0;
 
-size_t rand_pos() {
-
-	if (!seeded) {
-		
+size_t rand_pos()
+{
+	if (!seeded)
+	{		
 		srand ( time(NULL) );
 		seeded = 1;
 	}
@@ -19,7 +19,8 @@ size_t rand_pos() {
 	return (rand() * HASH_LIMIT) / RAND_MAX;
 }
 
-char *clone2str(const char *key) {
+char *clone2str(const char *key)
+{
 	if (!key)
 		return NULL;
 
