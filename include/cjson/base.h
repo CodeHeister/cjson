@@ -20,7 +20,7 @@ extern "C" {
 	extern bool infoDump(info_t *);
 	extern bool infoMove(info_t *, info_t *);
 	extern bool infoFree(info_t *);
-	extern info_t *infoNew(size_t, info_t *);
+	extern info_t *infoNew(uint64_t, info_t *);
 	extern info_t *infoResize(int, info_t *);
 	extern info_t *infoAdd(char *, info_type_t, void *, info_t *);
 	extern info_item_t *infoGet(char *, info_t *);

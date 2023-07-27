@@ -1,7 +1,7 @@
 CC=gcc
 DBG=valgrind
 
-CFLAGS=-I$(IDIR) -Wall -Wshadow -Wvla -Wimplicit-function-declaration -pedantic -Werror -O3
+CFLAGS=-I$(IDIR) -Wall -Wshadow -Wvla -Wimplicit-function-declaration -pedantic -Werror -O3 -g3
 DBGFLAGS=--leak-check=yes --leak-check=full --show-leak-kinds=all --track-origins=yes -s -q
 
 IDIR=include

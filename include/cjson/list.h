@@ -22,7 +22,7 @@ extern "C" {
 	extern bool jsonAdd(json_t *, json_t *);
 	extern json_t *jsonAddMultiple(json_t *, ...);
 
-	extern json_t *jsonGet(const char *, json_t *);
+	extern json_t *jsonGet(void *, json_t *);
 	extern void *jsonGetValue(char *, json_t *);
 	extern bool jsonGetMultiple(json_t *, ...);
 	extern bool jsonGetMultipleValues(json_t *, ...);

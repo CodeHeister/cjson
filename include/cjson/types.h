@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 	#include <stdint.h>
+	#include <stdbool.h>
 	#include <uchar.h>
 
 	#include <cjson/sha256.h>
@@ -65,7 +66,7 @@ extern "C" {
 	typedef struct info
 	{
 		info_item_t *array;
-		size_t length;
+		uint64_t length;
 	} info_t;
 
 	typedef struct json json_t;
@@ -88,7 +89,9 @@ extern "C" {
 		void (*print)(json_t *, PrintFlags);
 		void (*free)(json_t *);
 		char *(*convert)(json_t *);
-		void *(*clone)(json_t *);
+		json_t *(*clone)(json_t *);
+		json_t *(*get)(void *, json_t *);
+		bool (*add)(json_t *, json_t *);
 	} json_ftable_t;
 
 	extern type_t jsonType(json_t *);

@@ -62,7 +62,7 @@ void *infoValue(info_item_t *info)
 	return (info) ? info->value : NULL;
 }
 
-bool infoSetItem(size_t i, hash_t *hash, info_type_t type, void *value, info_t *info)
+bool infoSetItem(uint64_t i, hash_t *hash, info_type_t type, void *value, info_t *info)
 {
 	if (!info || i >= info->length)
 		return 0;
@@ -86,12 +86,12 @@ bool infoCleanItem(info_item_t *item)
 	return 1;
 }
 
-bool infoClean(size_t len, info_item_t *info)
+bool infoClean(uint64_t len, info_item_t *info)
 {
 	if (!info) 
 		return 0;
 
-	for (size_t i = 0; i < len; i++)
+	for (uint64_t i = 0; i < len; i++)
 		infoCleanItem(&info[i]);
 
 	return 1;
@@ -108,7 +108,7 @@ bool infoDump(info_t *info)
 	return 1;
 }
 
-info_t *infoNew(size_t len, info_t *dest)
+info_t *infoNew(uint64_t len, info_t *dest)
 {
 
 	info_t *info = dest;
@@ -141,7 +141,7 @@ info_t *infoNew(size_t len, info_t *dest)
 	return info;
 }
 
-bool infoFreeItem(size_t index, info_t *info)
+bool infoFreeItem(uint64_t index, info_t *info)
 {
 	if (!info || index >= info->length)
 		return 0;
@@ -160,7 +160,7 @@ bool infoFree(info_t *info)
 	if (!info)
 		return 0;
 
-	for (size_t i = 0; i < info->length; i++)
+	for (uint64_t i = 0; i < info->length; i++)
 		infoFreeItem(i, info);
 
 	free(info->array);
@@ -194,7 +194,7 @@ info_t *infoResize(int size, info_t *info)
 	if (!info)
 		return NULL;
 
-	size_t tmp_len = 0;
+	uint64_t tmp_len = 0;
 	info_item_t *new_array = NULL;
 
 	if (info->length+size > 0)
@@ -215,13 +215,13 @@ info_t *infoResize(int size, info_t *info)
 		return info;
 	}
 
-	for (size_t i = 0; i < info->length; i++)
+	for (uint64_t i = 0; i < info->length; i++)
 	{
 		if (!infoIsItemBlank(&info->array[i]))
 		{
-			size_t j = 0;
-			uint32_t mod = sha256Mod(infoHash(&info->array[i]), tmp_len);
-			uint32_t modIndex = (j+mod)%tmp_len;
+			uint64_t j = 0;
+			uint64_t mod = sha256Mod(infoHash(&info->array[i]), tmp_len);
+			uint64_t modIndex = (j+mod)%tmp_len;
 			
 			for (;j < tmp_len && !infoIsItemBlank(&new_array[modIndex]); j++, modIndex = (i+mod)%tmp_len);
 
@@ -255,8 +255,8 @@ info_t *infoAdd(char *key, info_type_t type, void *value, info_t *info)
 	if (key && !hash)
 		return NULL;
 
-	size_t i, j;
-	uint32_t mod, modIndex;
+	uint64_t i, j;
+	uint64_t mod, modIndex;
 
 
 	for (j = 0; j < 3; j++)
@@ -289,9 +289,9 @@ info_item_t *infoGet(char *key, info_t *info) {
 	if (!hash)
 		return NULL;
 
-	size_t i = 0;
-	uint32_t mod = sha256Mod(hash, info->length);
-	uint32_t modIndex = (i+mod)%info->length;
+	uint64_t i = 0;
+	uint64_t mod = sha256Mod(hash, info->length);
+	uint64_t modIndex = (i+mod)%info->length;
 
 	info_item_t *item = NULL;
 
@@ -397,7 +397,7 @@ void infoPrint(info_t *info)
 
 	info_item_t *arr = info->array;
 	
-	for (size_t i = 0; i < info->length; i++)
+	for (uint64_t i = 0; i < info->length; i++)
 	{
 		printf("%lu.\n", i);
 		infoPrintItem(&arr[i]);

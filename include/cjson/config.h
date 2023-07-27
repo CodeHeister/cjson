@@ -9,8 +9,8 @@ extern "C" {
 
 	#define PRINT_GAP "    "
 
-	extern size_t print_offset; // offset counter for print function
-	extern size_t default_hash_length;
+	extern uint64_t print_offset; // offset counter for print function
+	extern uint64_t default_hash_length;
 
 #ifdef __cplusplus
 }

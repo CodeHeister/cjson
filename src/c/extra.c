@@ -8,7 +8,7 @@
 
 static int seeded = 0;
 
-size_t rand_pos()
+uint64_t rand_pos()
 {
 	if (!seeded)
 	{		
@@ -24,7 +24,7 @@ char *clone2str(const char *key)
 	if (!key)
 		return NULL;
 
-	size_t i;
+	uint64_t i;
 	for (i = 0; key[i] != '\0'; i++);
 
 	char *clone = (char*)malloc(sizeof(char) * (i+1));
@@ -32,7 +32,7 @@ char *clone2str(const char *key)
 	if (!clone)
 		return NULL;
 
-	for (size_t j = 0; j <= i; j++)
+	for (uint64_t j = 0; j <= i; j++)
 		clone[j] = key[j];
 
 	return clone;

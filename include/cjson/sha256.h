@@ -8,9 +8,9 @@ extern "C" {
 	#include <stdint.h>
 	#include <stddef.h>
 
-	typedef uint32_t hash_t;
+	typedef uint64_t hash_t;
 
-	extern hash_t *bytes2sha256(const char *, size_t);
+	extern hash_t *bytes2sha256(const char *, uint64_t);
 	extern hash_t *str2sha256(const char *);
 
 	extern char *sha2562str(const hash_t *);
@@ -22,7 +22,7 @@ extern "C" {
 	extern void sha256Free(hash_t *);
 	extern void sha256Delete(hash_t *);
 
-	extern uint32_t sha256Mod(const hash_t *, uint32_t);
+	extern uint64_t sha256Mod(const hash_t *, uint64_t);
 
 #ifdef __cplusplus
 }

@@ -16,7 +16,7 @@
 
 #define HASH_LENGTH 8
 
-static const uint32_t K[64] = {
+static const uint64_t K[64] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
     0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
@@ -37,15 +37,15 @@ static const uint32_t K[64] = {
 
 static char hex_sym[16] = "0123456789abcdef";
 
-hash_t *bytes2sha256(const char *key, size_t n)
+hash_t *bytes2sha256(const char *key, uint64_t n)
 {
 	if (!key)
 		return NULL;
 
-	size_t size = (n+9) * 8;
-	size_t len_blk = (size-size%512)/512+1;
+	uint64_t size = (n+9) * 8;
+	uint64_t len_blk = (size-size%512)/512+1;
 
-	char *tmp_data = (char*)malloc(len_blk*512);
+	char *tmp_data = (char*)malloc(sizeof(char) * len_blk*512);
 	hash_t *hash = (hash_t*)malloc(sizeof(hash_t) * HASH_LENGTH);
 
 	if (!hash || !tmp_data)
@@ -59,23 +59,19 @@ hash_t *bytes2sha256(const char *key, size_t n)
 		return NULL;
 	}
 
-	if (!tmp_data)
-		return NULL;
-
-	for (size_t j = 0; j < len_blk * 64; j++)
-		tmp_data[j] = 0;
+	memset(tmp_data, 0, sizeof(char) * len_blk*512);
 
 	{
-		size_t i = 0;
+		uint64_t i = 0;
 		for (i = 0; key[i]; i++)
 			tmp_data[i+3-(i%4)*2] = key[i];
 		tmp_data[i+3-(i%4)*2] = (char)0x80;
 	}
 
-	for (size_t j = 8, tmp_size = size-72, tmp_len_blk = len_blk*64; j > 0; j--)
+	for (uint64_t j = 8, tmp_size = size-72, tmp_len_blk = len_blk*64; j > 0; j--)
 		tmp_data[tmp_len_blk-j+3-((tmp_len_blk-j)%4)*2] = (tmp_size >> (j-1)*8) & 0xff;
 
-	uint32_t *data = (uint32_t*)tmp_data;
+	uint64_t *data = (uint64_t*)tmp_data;
 
 	// hash storage for calculations
 	hash[0] = 0x6A09E667;
@@ -87,7 +83,7 @@ hash_t *bytes2sha256(const char *key, size_t n)
 	hash[6] = 0x1F83D9AB;
 	hash[7] = 0x5BE0CD19;
 
-	for (size_t i = 0; i < len_blk; i++)
+	for (uint64_t i = 0; i < len_blk; i++)
 	{
 		hash_t a = hash[0];
 		hash_t b = hash[1];
@@ -98,18 +94,18 @@ hash_t *bytes2sha256(const char *key, size_t n)
 		hash_t g = hash[6];
 		hash_t h = hash[7];
 
-		uint32_t tmp_storage[64];
+		uint64_t tmp_storage[64];
 
-		for (size_t j = 0; j < 16; j++) 
+		for (uint64_t j = 0; j < 16; j++) 
 			tmp_storage[j] = data[i*16+j];
 		
-		for (size_t j = 0; j < 48; j++)
+		for (uint64_t j = 0; j < 48; j++)
 			tmp_storage[j+16] = tmp_storage[j] + s0(tmp_storage[j+1]) + tmp_storage[j+9] + s1(tmp_storage[j+14]);
 
-		for (size_t j = 0; j < 64; j++)
+		for (uint64_t j = 0; j < 64; j++)
 		{
-			uint32_t tmp1 = h + S1(e) +	Ch(e, f, g) + tmp_storage[j] + K[j];
-			uint32_t tmp2 = Maj(a, b, c) + S0(a);
+			uint64_t tmp1 = h + S1(e) +	Ch(e, f, g) + tmp_storage[j] + K[j];
+			uint64_t tmp2 = Maj(a, b, c) + S0(a);
 			
 			h = g;
 			g = f;
@@ -144,7 +140,7 @@ hash_t *str2sha256(const char *str)
 	if (!str)
 		return NULL;
 
-	size_t length;
+	uint64_t length;
 	for (length = 0; str[length]; length++);
 	
 	return bytes2sha256(str, length);
@@ -160,7 +156,7 @@ char *sha2562str(const hash_t *hash)
 		return NULL;
 	
 	{
-		size_t i;
+		uint64_t i;
 		for (i = 0; i < 64; i++)
 			result[i] = hex_sym[ (hash[(i-i%8) / 8] >> (7-i%8) * 4) & 0xf ];
 		result[i] = '\0';
@@ -218,17 +214,17 @@ int sha256Print(const hash_t *hash)
 	return 1;
 }
 
-uint32_t sha256Mod(const hash_t *hash, uint32_t k)
+uint64_t sha256Mod(const hash_t *hash, uint64_t k)
 {
 	if (!hash)
 		return 0;
 
-	uint32_t r = 0;
-	size_t hash_size = sizeof(*hash) * HASH_LENGTH * 8;
+	uint64_t r = 0;
+	uint64_t hash_size = sizeof(*hash) * HASH_LENGTH * 8;
 
-	for (size_t i = hash_size; i-->0;)
+	for (uint64_t i = hash_size; i-->0;)
 	{
-		uint32_t num = (r << 1) | ( hash[ (hash_size-i-1) / (sizeof(*hash) * 8) ] >> i & 1 );
+		uint64_t num = (r << 1) | ( hash[ (hash_size-i-1) / (sizeof(*hash) * 8) ] >> i & 1 );
 		
 		r = (num >= k) ? num - k : num;
 	}

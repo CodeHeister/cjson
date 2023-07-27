@@ -11,6 +11,8 @@
 #include <cjson/config.h>
 #include <cjson/sha256.h>
 
+static bool first = 0;
+
 type_t jsonType(json_t *item)
 {
 	return item ? item->type : UNKNOWN;
@@ -26,38 +28,231 @@ void *jsonValue(json_t *item)
 	return item ? item->value : NULL;
 }
 
-static void printList(json_t *list, PrintFlags flags)
+json_t *getList(void *key, json_t *list)
 {
-	list = jsonCheckIfList(list);
-	if (!list)
-		return;
+	if (!list || !key || jsonType(list) != LIST)
+		return NULL;
 
-	printf("{ ");
-	print_offset++;
-
-	json_t *item = list->next;
-	while (item != NULL)
+	// init 
+	hash_t *key_hash = str2sha256(key);
+	json_t *hash_node = list->next;
+	json_t *item = NULL;
+	
+	uint64_t key_mod = sha256Mod(key_hash, HASH_LIMIT);
+	
+	while (hash_node)
 	{
-		if (item->vtable->print != NULL)
+		uint64_t *pos = (uint64_t*)infoGetValue("pos", jsonInfo(hash_node));
+
+		if (pos && key_mod < *pos)
+			break;
+
+		hash_node = hash_node->next;
+	}
+
+	if (list->next != NULL && !hash_node)
+		hash_node = list->next;
+
+	if (!hash_node)
+	{
+		sha256Delete(key_hash);
+		key_hash = NULL;
+
+		return NULL;
+	}
+
+	json_t *tmp_item = (jsonType(hash_node) == HASH_NODE) ? (json_t*)jsonValue(hash_node) : NULL;
+	
+	while (tmp_item)
+	{
+		hash_t *tmp_hash = (hash_t*)infoGetValue("hash", jsonInfo(tmp_item));
+		char *tmp_key = NULL;
+		
+		if (!tmp_hash)
 		{
-			if (jsonType(item) != HASH_NODE)
-				for (size_t i = 0; i < print_offset; i++)
-					printf(PRINT_GAP);
+			tmp_key = (char*)infoGetValue("key", jsonInfo(tmp_item));
 
-			if (item->vtable && item->vtable->print)
-				item->vtable->print(item, flags);
+			if (!tmp_key)
+				tmp_hash = NULL;
+			else
+				tmp_hash = str2sha256(tmp_key);
+		}
+		
+		if (tmp_hash && sha256Compare(tmp_hash, key_hash))
+		{
+			item = tmp_item;
 
-			if (jsonType(item) != HASH_NODE)
-				if (item->next != NULL)
-					printf("\033[0;37m,\033[0m");
+			if (tmp_key)
+			{
+				sha256Delete(tmp_hash);
+				tmp_hash = NULL;
+			}
+
+			break;
+		}
+		
+		if (tmp_key)
+		{
+			sha256Delete(tmp_hash);
+			tmp_hash = NULL;
 		}
 
-		item = item->next;
+		tmp_item = tmp_item->next;
+	}
+
+	sha256Delete(key_hash);
+	key_hash = NULL;
+
+	return item;
+}
+
+json_t *getNode(void *key, json_t *node)
+{
+	if (!key || !node || jsonType(node) != NODE)
+		return 0;
+
+	json_t *list = jsonCheckIfList(node);
+	if (list)
+		return jsonGet(key, list);
+
+	return NULL;
+}
+
+bool addList(json_t *item, json_t *list) {
+	if (!list || !item || jsonType(list) != LIST)
+		return 0;
+
+	json_t *hash_node;
+	
+	hash_t *tmp_hash = (hash_t*)infoGetValue("hash", jsonInfo(item));
+	char *tmp_key = NULL;
+	
+	if (!tmp_hash) {
+		
+		tmp_key = (char*)infoGetValue("key", jsonInfo(item));
+
+		if (!tmp_key) {
+
+			tmp_hash = NULL;
+		}
+		else {
+
+			tmp_hash = str2sha256(tmp_key);
+		}
+	}
+
+	if (!tmp_hash)
+		return 0;
+
+	uint64_t key_mod = sha256Mod(tmp_hash, HASH_LIMIT);
+
+	if (tmp_key)
+	{
+		tmp_hash = NULL;
+		sha256Delete(tmp_hash);
+	}
+
+	for (hash_node =  list->next;hash_node; hash_node = hash_node->next)
+	{
+		uint64_t *pos = (uint64_t*)infoGetValue("pos", jsonInfo(hash_node));
+		if (pos && key_mod < *pos)
+			break;
+	}
+
+	if (list->next && !hash_node)
+		hash_node = list->next;
+
+	if (!hash_node)
+		return NULL;
+
+	if (!hash_node->value)
+	{
+		hash_node->value = item;
+	}
+	else
+	{
+		json_t *check_item = (json_t*)(hash_node->value);
+		hash_t *key_hash = (hash_t*)infoGetValue("hash", jsonInfo(item));
+		tmp_key = NULL;
+		
+		if (!key_hash) {
+			
+			tmp_key = (char*)infoGetValue("key", jsonInfo(item));
+
+			if (!tmp_key) {
+
+				key_hash = NULL;
+			}
+			else {
+
+				key_hash = str2sha256(tmp_key);
+			}
+		}
+
+		if (!key_hash)
+			return NULL;
+
+		while (check_item != NULL) {
+			
+			if (sha256Compare((hash_t*)infoGetValue("hash", jsonInfo(check_item)), key_hash))
+				break;
+			
+			check_item = check_item->next;
+		}
+		if (!check_item && check_item != item) {
+
+			unshift(item, (json_t*)(hash_node->value));
+		}
+		else {
+			
+			jsonFree(check_item);
+			jsonMove(check_item, item);
+
+			free(item);
+			item = NULL;
+		}
+
+		if (tmp_key != NULL) {
+
+			sha256Delete(key_hash);
+			key_hash = NULL;
+		}
+	}
+
+	return 1;
+}
+
+bool addNode(json_t *item, json_t *node) {
+	if (!item || !node || jsonType(node) != NODE)
+		return 0;
+
+	json_t *list = jsonCheckIfList(node);
+	if (list)
+		return jsonAdd(item, list);
+
+	return 0;
+}
+
+static void printList(json_t *list, PrintFlags flags)
+{
+	if (!list || jsonType(list) != LIST)
+		return;
+
+	printf("{");
+	print_offset++;
+
+	first = 1;
+	for (json_t *item = list->next; item; item = item->next)
+	{
+		if (item->vtable && item->vtable->print)
+		{
+			item->vtable->print(item, flags);
+		}
 	}
 
 	print_offset--;
-	printf("\b \n");
-	for (size_t i = 0; i < print_offset; i++)
+	printf("\n");
+	for (uint64_t i = 0; i < print_offset; i++)
 		printf(PRINT_GAP);
 	printf("}");
 }
@@ -71,15 +266,13 @@ static void printNode(json_t *node, PrintFlags flags)
 	
 	json_t* list = jsonCheckIfList(node);
 	
-	if (list)
+	if (list && list->vtable && list->vtable->print)
 	{
-		if (list->vtable && list->vtable->print)
-			list->vtable->print(list, flags);
+		list->vtable->print(list, flags);
+		return;
 	}
-	else
-	{
-		printf("\033[1;31m-\033[0m");
-	}
+
+	printf("\033[1;31m-\033[0m");
 
 	return;
 }
@@ -93,14 +286,17 @@ static void printHashNode(json_t *hash_node, PrintFlags flags)
 	{
 		if (item->vtable && item->vtable->print)
 		{
-			printf("\n");
+			if (first)
+				first = 0;
+			else
+				printf(",");
 			
-			for (size_t i = 0; i < print_offset; i++)
+			printf("\n");
+
+			for (uint64_t i = 0; i < print_offset; i++)
 				printf(PRINT_GAP);
 			
 			item->vtable->print(item, flags);
-
-			printf(",");
 		}
 	}
 
@@ -263,13 +459,13 @@ static void freeString(json_t *item)
 	return;
 }
 
-json_ftable_t json_list_vtable		= { &printList, &freeList, NULL, NULL };
-json_ftable_t json_node_vtable		= { &printNode, &freeNode, NULL, NULL };
-json_ftable_t json_hash_node_vtable = { &printHashNode, &freeHashNode, NULL, NULL };
-json_ftable_t json_int_vtable		= { &printInt, &freeInt, NULL, NULL };
-json_ftable_t json_uint_vtable		= { &printUint, &freeUint, NULL, NULL };
-json_ftable_t json_char_vtable		= { &printChar, &freeChar, NULL, NULL };
-json_ftable_t json_string_vtable	= { &printString, &freeString, NULL, NULL };
+json_ftable_t json_list_vtable		= { &printList, &freeList, NULL, NULL, &getList, &addList };
+json_ftable_t json_node_vtable		= { &printNode, &freeNode, NULL, NULL, &getNode, &addNode };
+json_ftable_t json_hash_node_vtable = { &printHashNode, &freeHashNode, NULL, NULL, NULL };
+json_ftable_t json_int_vtable		= { &printInt, &freeInt, NULL, NULL, NULL, NULL };
+json_ftable_t json_uint_vtable		= { &printUint, &freeUint, NULL, NULL, NULL, NULL };
+json_ftable_t json_char_vtable		= { &printChar, &freeChar, NULL, NULL, NULL, NULL };
+json_ftable_t json_string_vtable	= { &printString, &freeString, NULL, NULL, NULL, NULL };
 
 json_t *jsonUnknown(void* const value, json_ftable_t* const vtable, json_t* const dest)
 {
@@ -305,7 +501,7 @@ json_t *jsonHashNode()
 
 	new_item->type = HASH_NODE;
 
-	size_t *pos = (size_t*)malloc(sizeof(size_t));
+	uint64_t *pos = (uint64_t*)malloc(sizeof(uint64_t));
 	*pos = rand_pos();
 
 	infoAdd("pos", UINT, pos, info);
@@ -316,7 +512,7 @@ json_t *jsonHashNode()
 json_t *jsonNew(json_t* const dest)
 {
 	json_t *new_item = jsonUnknown(NULL, &json_list_vtable, dest);
-	size_t *hash_length = (size_t*)malloc(sizeof(size_t));
+	uint64_t *hash_length = (uint64_t*)malloc(sizeof(uint64_t));
 
 	if (!new_item || !hash_length)
 	{
@@ -337,7 +533,7 @@ json_t *jsonNew(json_t* const dest)
 
 	*hash_length = 0;
 
-	for (size_t i = 0; i < default_hash_length; i++)
+	for (uint64_t i = 0; i < default_hash_length; i++)
 	{
 		json_t *hash_node = jsonHashNode();
 		
