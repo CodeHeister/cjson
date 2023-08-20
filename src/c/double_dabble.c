@@ -5,6 +5,7 @@
 #include <inttypes.h>
 
 #include <cjson/double_dabble.h>
+#include <cjson/debug.h>
 
 typedef enum calc_flags
 {
@@ -31,6 +32,7 @@ bigint_t *newBigInt(uint64_t size, bigint_t *dest)
 		return NULL;
 	}
 
+	new_bigint->size = size;
 	new_bigint->length = size;
 	new_bigint->isNegative = 0;
 
@@ -54,48 +56,112 @@ void deleteBigInt(bigint_t *bigint)
 	return;
 }
 
-bigint_t *convertToBigInt(char *number, bigint_t *dest)
+bigint_t *convert2toBigInt(char *number)
 {
-	if (!number)
-		return NULL;
-
 	uint64_t length = strlen(number);
-	uint64_t size = (length+1)/2;
-	bigint_t *bigint = newBigInt(size, dest);
+	uint64_t size = (uint64_t)(length*0.125)+1;
+	bigint_t *bigint = newBigInt(size, NULL);
 	char *tmp_bin = (char*)malloc(sizeof(char) * size);
 
 	memset(tmp_bin, 0, sizeof(char) * size);
 
 	for (uint64_t i = 0; i < length; i++)
 	{
-		if (number[i] - '0' > 9)
+		if (number[i] - '0' > 1)
 		{
 			free(tmp_bin);
-			
-			if (dest)
-				freeBigInt(bigint);
-			else 
-				deleteBigInt(bigint);
+			deleteBigInt(bigint);
 
 			return NULL;
 		}
 	}
 
-	for (uint64_t i = size; i-->0;)
+	return bigint;
+}
+
+bigint_t *convert8toBigInt(char *number)
+{
+	uint64_t length = strlen(number);
+	uint64_t size = (uint64_t)(length*0.375)+1;
+	bigint_t *bigint = newBigInt(size, NULL);
+	char *tmp_bin = (char*)malloc(sizeof(char) * size);
+
+	memset(tmp_bin, 0, sizeof(char) * size);
+
+	for (uint64_t i = 0; i < length; i++)
+	{
+		if (number[i] - '0' > 7)
+		{
+			free(tmp_bin);
+			deleteBigInt(bigint);
+
+			return NULL;
+		}
+	}
+
+	return bigint;
+}
+
+bigint_t *convert16toBigInt(char *number)
+{
+	uint64_t length = strlen(number);
+	uint64_t size = (uint64_t)(length*0.5)+1;
+	bigint_t *bigint = newBigInt(size, NULL);
+	char *tmp_bin = (char*)malloc(sizeof(char) * size);
+
+	memset(tmp_bin, 0, sizeof(char) * size);
+
+	for (uint64_t i = 0; i < length; i++)
+	{
+		if (number[i] - '0' > 9 && number[i] - 'A' > 5 && number[i] - 'a' > 5)
+		{
+			free(tmp_bin);
+			deleteBigInt(bigint);
+
+			return NULL;
+		}
+	}
+
+	return bigint;
+}
+
+
+bigint_t *convert10toBigInt(char *number)
+{
+	uint64_t length = strlen(number);
+	uint64_t size1 = (uint64_t)(length*0.4152)+1;
+	uint64_t size2 = (uint64_t)(length/2)+(length&1);
+	bigint_t *bigint = newBigInt(size1, NULL);
+	char *tmp_bin = (char*)malloc(sizeof(char) * size2);
+
+	memset(tmp_bin, 0, sizeof(char) * size2);
+
+	for (uint64_t i = 0; i < length; i++)
+	{
+		if (number[i] - '0' > 9)
+		{
+			free(tmp_bin);
+			deleteBigInt(bigint);
+
+			return NULL;
+		}
+	}
+
+	for (uint64_t i = size2; i-->0;)
 	{
 		uint8_t i1 = (i == 0 && length&1) ? 0 : number[length&1 ? i*2-1 : i*2] - '0';
 		uint8_t i2 = number[length&1 ? i*2 : i*2+1] - '0';
 		tmp_bin[i] = (i1 << 4) | i2;
 	}
 
-	for (uint64_t i = 0; i < size; i++)
+	for (uint64_t i = 0; i < size1; i++)
 	{
 		for (uint64_t j = 0; j < 8; j++)
 		{
 			char tmp_bit1 = 0;
 			char tmp_bit2 = 0;
 
-			for (uint64_t g = 0; g < size; g++)
+			for (uint64_t g = 0; g < size2; g++)
 			{
 				tmp_bit1 = tmp_bin[g]&1;
 				tmp_bin[g] = ((tmp_bin[g] >> 1) & ~(0x80)) | (tmp_bit2 << 7);
@@ -111,30 +177,82 @@ bigint_t *convertToBigInt(char *number, bigint_t *dest)
 				}
 			}
 			
-			for (uint64_t g = 0; g < size; g++)
+			for (uint64_t g = 0; g < size1; g++)
 			{
 				tmp_bit1 = bigint->bin[g]&1;
 				bigint->bin[g] = ((bigint->bin[g] >> 1) & ~(0x80)) | (tmp_bit2 << 7);
 				tmp_bit2 = tmp_bit1;
 			}
+
 		}
 	}
 
 	free(tmp_bin);
 
+	for (uint64_t i = 0; i < bigint->length; i++)
+	{
+		if (bigint->bin[i])
+		{
+			bigint->size = bigint->length-i;
+			break;
+		}
+	}
+
 	return bigint;
 }
 
-static bigint_t *calc(bigint_t *num1, bigint_t *num2, CalcFlags flag)
+bigint_t *convertToBigInt(char *number)
+{
+	if (!number)
+		return NULL;
+
+	bigint_t *bigint = NULL;
+
+	bool isNegative = 0;
+	char *anchor = number;
+	if (number[0] == '-')
+	{
+		anchor += 1;
+		isNegative = 1;
+	}
+
+	if (anchor[0] == '0')
+	{
+		switch (anchor[1])
+		{
+			case 'b':
+				bigint = convert2toBigInt(anchor+2);
+				break;
+			case 'o':
+				bigint = convert8toBigInt(anchor+2);
+				break;
+			case 'x':
+				bigint = convert16toBigInt(anchor+2);
+				break;
+			default:
+				bigint = convert10toBigInt(anchor+1);
+		}
+	}
+	else
+	{
+		bigint = convert10toBigInt(anchor);
+	}
+
+	bigint->isNegative = isNegative;
+
+	return bigint;
+}
+
+static bigint_t *calc(bigint_t *num1, bigint_t *num2, bigint_t *num3,  CalcFlags flag)
 {
 	if (!num1 || !num2)
 		return NULL;
 	
 	char tmp = 0, fi1 = 1, fi2 = 1;
 	uint64_t i1 = num1->length, i2 = num2->length;
-	uint64_t size = ((i1 < i2) ? i2 : i1) + flag;
+	uint64_t size = ((num1->size < num2->size) ? num2->size : num1->size) + flag;
 	uint64_t g = size;
-	bigint_t *dest = newBigInt(size, NULL);
+	bigint_t *dest = newBigInt(size, num3);
 
 	if (!dest)
 		return NULL;
@@ -166,10 +284,10 @@ static bigint_t *calc(bigint_t *num1, bigint_t *num2, CalcFlags flag)
 
 bigint_t *addBigInt(bigint_t *num1, bigint_t *num2)
 {
-	return calc(num1, num2, ~(num1->isNegative ^ num2->isNegative) & 1);
+	return calc(num1, num2, NULL, ~(num1->isNegative ^ num2->isNegative) & 1);
 }
 
 bigint_t *subBigInt(bigint_t *num1, bigint_t *num2)
 {
-	return calc(num1, num2, (num1->isNegative ^ num2->isNegative) & 1);
+	return calc(num1, num2, NULL, (num1->isNegative ^ num2->isNegative) & 1);
 }

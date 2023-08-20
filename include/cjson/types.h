@@ -100,7 +100,7 @@ extern "C" {
 
 	extern json_t *jsonUnknown(void *, json_ftable_t *, json_t *);
 
-	extern json_t *jsonNew(json_t *);
+	extern json_t *jsonNew();
 	extern json_t *jsonNode(const char *, json_t *);
 	extern json_t *jsonHashNode();
 

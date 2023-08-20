@@ -10,7 +10,7 @@ int main() {
 	setlocale(LC_ALL, "en_US.UTF-8");
 	
 	// create (dynamic) new json object
-	json_t *new = jsonNew(NULL);
+	json_t *new = jsonNew();
 
 	assert(new);
 
@@ -29,7 +29,7 @@ int main() {
 
 	/* ------------------ */
 
-	new = jsonNew(NULL);
+	new = jsonNew();
 
 	assert(new);
 
@@ -57,9 +57,9 @@ int main() {
 			jsonInt(u8"test1", 9),
 			jsonNode(u8"holder",
 				jsonAddMultiple(jsonChar(u8"test", 'c'),
-					jsonNew(NULL)
+					jsonNew()
 					)),
-			jsonNew(NULL));
+			jsonNew());
 
 	assert(new);
 

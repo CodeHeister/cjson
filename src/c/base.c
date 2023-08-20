@@ -281,7 +281,8 @@ info_t *infoAdd(char *key, info_type_t type, void *value, info_t *info)
 	return info;
 }
 
-info_item_t *infoGet(char *key, info_t *info) {
+info_item_t *infoGet(char *key, info_t *info)
+{
 	if (!info || !info->array)
 		return NULL;
 
@@ -295,10 +296,10 @@ info_item_t *infoGet(char *key, info_t *info) {
 
 	info_item_t *item = NULL;
 
-	for (i = 0; i < info->length; i++, modIndex = (i+mod)%info->length) {
-
-		if (sha256Compare(infoHash(&info->array[modIndex]), hash)) {
-		
+	for (i = 0; i < info->length; i++, modIndex = (i+mod)%info->length)
+	{
+		if (sha256Compare(infoHash(&info->array[modIndex]), hash))
+		{
 			item = &info->array[modIndex];
 			break;
 		}
@@ -310,11 +311,13 @@ info_item_t *infoGet(char *key, info_t *info) {
 	return item;
 }
 
-void *infoGetValue(char *key, info_t *info) {
+void *infoGetValue(char *key, info_t *info)
+{
 	return (info && key) ? infoValue(infoGet(key, info)) : NULL;
 }
 
-bool infoRemove(char *key, info_t *info) {
+bool infoRemove(char *key, info_t *info)
+{
 	if (!info || !key)
 		return 0;
 	

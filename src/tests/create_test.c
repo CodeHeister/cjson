@@ -11,7 +11,7 @@ int main() {
 	setlocale(LC_ALL, "en_US.UTF-8");
 	
 	// create (dynamic) new json objects
-	json_t *new = jsonNew(NULL);
+	json_t *new = jsonNew();
 	json_t *i = jsonInt(u8"test", 8);
 	json_t *u = jsonUint(u8"test", 8);
 	json_t *c = jsonChar(u8"test", 'c');

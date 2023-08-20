@@ -17,6 +17,7 @@ extern "C" {
 
 	typedef struct bigint {
 		char *bin;
+		uint64_t size;
 		uint64_t length;
 		bool isNegative;
 	} bigint_t;
@@ -24,7 +25,7 @@ extern "C" {
 	extern bigint_t *newBigInt(uint64_t, bigint_t*);
 	extern void freeBigInt(bigint_t*);
 	extern void deleteBigInt(bigint_t*);
-	extern bigint_t *convertToBigInt(char*, bigint_t*);
+	extern bigint_t *convertToBigInt(char*);
 	extern bigint_t *addBigInt(bigint_t*, bigint_t*);
 	extern bigint_t *subBigInt(bigint_t*, bigint_t*);
 

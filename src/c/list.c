@@ -9,7 +9,8 @@
 #include <cjson/extra.h>
 #include <cjson/sha256.h>
 
-json_t *jsonCheckIfList(json_t *item) {
+json_t *jsonCheckIfList(json_t *item)
+{
 	if (!item)
 		return NULL;
 
@@ -25,12 +26,13 @@ json_t *jsonCheckIfList(json_t *item) {
 	return NULL;
 }
 
-void jsonFree(json_t *item) {
+void jsonFree(json_t *item)
+{
 	if (!item)
 		return;
 
-	if (item->vtable && item->vtable->free) {
-
+	if (item->vtable && item->vtable->free)
+	{
 		item->vtable->free(item);
 		item->value = NULL;
 	}
@@ -43,7 +45,8 @@ void jsonFree(json_t *item) {
 	return;
 }
 
-void jsonDelete(json_t *item) {
+void jsonDelete(json_t *item)
+{
 	if (!item)
 		return;
 
@@ -53,7 +56,8 @@ void jsonDelete(json_t *item) {
 	return;
 }
 
-void jsonPrint(json_t *item, PrintFlags flags) {
+void jsonPrint(json_t *item, PrintFlags flags)
+{
 	if (item != NULL && item->vtable != NULL)
 		item->vtable->print(item, flags);
 	printf("\n");
@@ -61,7 +65,8 @@ void jsonPrint(json_t *item, PrintFlags flags) {
 	return;
 }
 
-json_t *jsonGetByIndex(uint64_t index, json_t *list) {
+json_t *jsonGetByIndex(uint64_t index, json_t *list)
+{
 	if (!list)
 		return NULL;
 
@@ -72,8 +77,8 @@ json_t *jsonGetByIndex(uint64_t index, json_t *list) {
 	return item;
 }
 
-json_t *jsonGetHashNodeByIndex(int index, json_t *list) {
-    
+json_t *jsonGetHashNodeByIndex(int index, json_t *list)
+{    
 	list = jsonCheckIfList(list);
 
 	if (!list)
@@ -90,7 +95,8 @@ json_t *jsonGetHashNodeByIndex(int index, json_t *list) {
 	return jsonGetByIndex((uint64_t)index, list);
 }
 
-void jsonSwapByIndex(int i1, int i2, json_t *head) {
+void jsonSwapByIndex(int i1, int i2, json_t *head) 
+{
     if (!head)
 		return;
 
@@ -98,7 +104,8 @@ void jsonSwapByIndex(int i1, int i2, json_t *head) {
     json_t *preitem2 = NULL;
     json_t *item = head;
 
-    for (int j = 0; item != NULL; j++) {
+    for (int j = 0; item != NULL; j++)
+	{
         if (j == i1)
             preitem1 = item;
           
@@ -120,22 +127,26 @@ void jsonSwapByIndex(int i1, int i2, json_t *head) {
     preitem2->next->next = tmp;
 }
 
-int jsonPartition(int low, int high, json_t *list) {
-
+int jsonPartition(int low, int high, json_t *list)
+{
 	json_t *pivot = jsonGetHashNodeByIndex(high, list);
 	uint64_t *pivot_pos = (uint64_t*)infoGetValue("pos", jsonInfo(pivot));
 
 	int i = low-1;
 	json_t *hash_node = jsonGetHashNodeByIndex(low, list);
 
-	for (int j = low; j <= high-1; j++) {
+	for (int j = low; j <= high-1; j++)
+	{
 		uint64_t *pos = (uint64_t*)infoGetValue("pos", jsonInfo(hash_node->next));
-		if (pos && *pos < *pivot_pos) {
+	
+		if (pos && *pos < *pivot_pos)
+		{
 			i++;
 			jsonSwapByIndex(i, j, list);
 			hash_node = jsonGetHashNodeByIndex(j, list);
 		}
-		else {
+		else
+		{
 			hash_node = hash_node->next;
 		}
 	}
@@ -179,7 +190,8 @@ void *jsonGetValue(char *key, json_t *list)
 	return (key && list) ? jsonValue(jsonGet(key, list)) : NULL;
 }
 
-bool jsonGetMultiple(json_t *list, ...) {
+bool jsonGetMultiple(json_t *list, ...)
+{
 	if (!list)
 		return 0;
 
@@ -259,7 +271,8 @@ bool jsonAdd(json_t *item, json_t *list)
 	return 0;
 }
 
-json_t *jsonAddMultiple(json_t *item, ...) {
+json_t *jsonAddMultiple(json_t *item, ...)
+{
 	if (!item)
 		return NULL;
 
@@ -268,14 +281,10 @@ json_t *jsonAddMultiple(json_t *item, ...) {
 	 
 	json_t *list = item;
 
-	if (list != NULL) {
-		
+	if (list != NULL)
 		for (; list && jsonType(list) != LIST; list = va_arg(args, json_t*));
-	}
-	else {
-
+	else
 		return NULL;
-	}
 
 	va_end(args);
 	va_start(args, item);
